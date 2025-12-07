@@ -1,0 +1,78 @@
+{
+  "files": [
+    "C:\\Windows\\System32\\config\\SAM",
+    "C:\\Windows\\System32\\config\\SYSTEM",
+    "C:\\Windows\\System32\\config\\SECURITY",
+    "C:\\Windows\\System32\\config\\SOFTWARE",
+    "C:\\Windows\\System32\\config\\DEFAULT",
+
+    "C:\\Windows\\System32\\winevt\\Logs\\Security.evtx",
+    "C:\\Windows\\System32\\winevt\\Logs\\System.evtx",
+    "C:\\Windows\\System32\\winevt\\Logs\\Application.evtx",
+
+    "C:\\Windows\\System32\\drivers\\etc\\hosts",
+    "C:\\Windows\\System32\\drivers\\etc\\services",
+
+    "C:\\Users\\*\\NTUSER.DAT",
+    "C:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\UsrClass.dat",
+
+    "C:\\Users\\*\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\*",
+    "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\*",
+
+    "C:\\Windows\\System32\\Tasks\\*",
+    "C:\\Windows\\Tasks\\*",
+
+    "C:\\Windows\\System32\\GroupPolicy\\Machine\\Scripts\\Startup\\*",
+    "C:\\Windows\\System32\\GroupPolicy\\User\\Scripts\\Logon\\*",
+
+    "C:\\Users\\*\\AppData\\Roaming\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt",
+    "C:\\Users\\*\\AppData\\Roaming\\Microsoft\\Windows\\PowerShell\\history.txt",
+
+    "C:\\Users\\*\\.ssh\\*",
+    "C:\\ProgramData\\ssh\\*",
+
+    "C:\\Users\\*\\AppData\\Roaming\\Microsoft\\Credentials\\*",
+    "C:\\Users\\*\\AppData\\Local\\Microsoft\\Credentials\\*",
+    "C:\\Users\\*\\AppData\\Roaming\\Microsoft\\Protect\\*",
+
+    "C:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Login Data",
+    "C:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cookies",
+    "C:\\Users\\*\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\*\\logins.json",
+    "C:\\Users\\*\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\*\\key4.db",
+
+    "C:\\Users\\*\\AppData\\Roaming\\Microsoft\\Windows\\Recent\\AutomaticDestinations\\*",
+    "C:\\Users\\*\\AppData\\Roaming\\Microsoft\\Windows\\Recent\\CustomDestinations\\*",
+
+    "C:\\Windows\\Panther\\Unattend.xml",
+    "C:\\Windows\\System32\\Sysprep\\Unattend.xml",
+    "C:\\Windows\\System32\\Sysprep\\Panther\\Unattend.xml",
+
+    "C:\\ProgramData\\Microsoft\\Crypto\\RSA\\MachineKeys\\*",
+    "C:\\ProgramData\\Microsoft\\Crypto\\Keys\\*",
+
+    "C:\\Users\\*\\.aws\\credentials",
+    "C:\\Users\\*\\.aws\\config",
+    "C:\\Users\\*\\.azure\\*",
+    "C:\\Users\\*\\.config\\gcloud\\*",
+
+    "C:\\Users\\*\\.docker\\config.json",
+    "C:\\Users\\*\\.git-credentials",
+    "C:\\Users\\*\\.netrc",
+
+    "C:\\Windows\\System32\\OpenSSH\\*",
+    "C:\\Users\\*\\.gnupg\\*",
+
+    "C:\\ProgramData\\Docker\\config\\daemon.json",
+    "C:\\ProgramData\\Docker\\*",
+    "C:\\Program Files\\Containerd\\*",
+
+    "C:\\Windows\\System32\\drivers\\etc\\*",
+    "C:\\Windows\\Debug\\NetSetup.LOG",
+
+    "C:\\Windows\\System32\\config\\journal\\*",
+    "C:\\Windows\\System32\\LogFiles\\Firewall\\pfirewall.log",
+
+    "C:\\Windows\\System32\\boot\\EFI\\*",
+    "C:\\EFI\\Microsoft\\Boot\\*"
+  ]
+}

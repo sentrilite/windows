@@ -1,0 +1,361 @@
+[
+  {
+    "match_key": "cmd",
+    "match_values": [
+      "mimikatz.exe",
+      "procdump.exe",
+      "lsass.exe"
+    ],
+    "tags": [
+      "credential-access",
+      "high-risk"
+    ],
+    "risk_level": 1
+  },
+  {
+    "match_key": "arg1",
+    "match_values": [
+      "lsass.exe",
+      "lsass.dmp"
+    ],
+    "tags": [
+      "credential-access",
+      "lsass-dump"
+    ],
+    "risk_level": 1
+  },
+  {
+    "match_key": "cmd",
+    "match_values": [
+      "psexec.exe",
+      "psexesvc.exe",
+      "wmic.exe",
+      "wmiprvse.exe",
+      "winrm.cmd"
+    ],
+    "tags": [
+      "lateral-movement",
+      "remote-execution"
+    ],
+    "risk_level": 1
+  },
+  {
+    "match_key": "cmd",
+    "match_values": [
+      "C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe",
+      "powershell.exe",
+      "pwsh.exe"
+    ],
+    "tags": [
+      "powershell",
+      "script-execution"
+    ],
+    "risk_level": 2
+  },
+  {
+    "match_key": "arg1",
+    "match_values": [
+      "-EncodedCommand",
+      "-enc ",
+      "-e ",
+      "FromBase64String(",
+      "Invoke-Expression",
+      "IEX "
+    ],
+    "tags": [
+      "obfuscated-script",
+      "suspicious-powershell"
+    ],
+    "risk_level": 1
+  },
+  {
+    "match_key": "cmd",
+    "match_values": [
+      "wscript.exe",
+      "cscript.exe"
+    ],
+    "tags": [
+      "script-host",
+      "windows-scripting"
+    ],
+    "risk_level": 2
+  },
+  {
+    "match_key": "cmd",
+    "match_values": [
+      "mshta.exe",
+      "rundll32.exe",
+      "regsvr32.exe",
+      "msbuild.exe",
+      "installutil.exe"
+    ],
+    "tags": [
+      "lolbins",
+      "living-off-the-land"
+    ],
+    "risk_level": 2
+  },
+  {
+    "match_key": "cmd",
+    "match_values": [
+      "certutil.exe",
+      "bitsadmin.exe",
+      "curl.exe",
+      "wget.exe"
+    ],
+    "tags": [
+      "ingress-egress",
+      "exfiltration"
+    ],
+    "risk_level": 2
+  },
+  {
+    "match_key": "cmd",
+    "match_values": [
+      "mstsc.exe"
+    ],
+    "tags": [
+      "rdp-client",
+      "remote-access"
+    ],
+    "risk_level": 3
+  },
+  {
+    "match_key": "msg_type_str",
+    "match_values": [
+      "PORT_OPEN"
+    ],
+    "tags": [
+      "network-service-start"
+    ],
+    "risk_level": 2
+  },
+  {
+    "match_key": "msg_type_str",
+    "match_values": [
+      "NETWORK_CONNECT"
+    ],
+    "tags": [
+      "network-activity"
+    ],
+    "risk_level": 3
+  },
+  {
+    "match_key": "ip",
+    "match_values": [
+      "169.254.169.254"
+    ],
+    "tags": [
+      "cloud-metadata-access",
+      "potential-credential-theft"
+    ],
+    "risk_level": 1
+  },
+  {
+    "match_key": "user",
+    "match_values": [
+      "NT AUTHORITY\\SYSTEM",
+      "NT AUTHORITY\\LOCAL SERVICE",
+      "NT AUTHORITY\\NETWORK SERVICE"
+    ],
+    "tags": [
+      "privileged-service-account"
+    ],
+    "risk_level": 3
+  },
+  {
+    "match_key": "user",
+    "match_values": [
+      "Administrator"
+    ],
+    "tags": [
+      "privileged-user-activity"
+    ],
+    "risk_level": 3
+  },
+  {
+    "match_key": "cmd",
+    "match_values": [
+      "sqlcmd.exe",
+      "osql.exe"
+    ],
+    "tags": [
+      "database-access",
+      "potential-data-exfil"
+    ],
+    "risk_level": 2
+  },
+  {
+    "match_key": "cmd",
+    "match_values": [
+      "python.exe",
+      "perl.exe",
+      "ruby.exe",
+      "node.exe"
+    ],
+    "tags": [
+      "scripting-runtime"
+    ],
+    "risk_level": 3
+  },
+  {
+    "match_key": "cmd",
+    "match_values": [
+      "7z.exe",
+      "winrar.exe",
+      "rar.exe",
+      "zip.exe"
+    ],
+    "tags": [
+      "archive-tool",
+      "potential-bulk-exfil"
+    ],
+    "risk_level": 3
+  },
+  {
+    "match_key": "msg_type_str",
+    "match_values": [
+      "NETWORK_CONNECT"
+    ],
+    "tags": [
+      "windows",
+      "network-connect"
+    ],
+    "risk_level": 3
+  },
+  {
+    "match_key": "comm",
+    "match_values": [
+      "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+      "C:\\Program Files\\Mozilla Firefox\\firefox.exe",
+      "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+      "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
+    ],
+    "tags": [
+      "windows",
+      "browser-network-baseline"
+    ],
+    "risk_level": 3
+  },
+  {
+    "match_key": "comm",
+    "match_values": [
+      "C:\\Windows\\System32\\svchost.exe",
+      "C:\\Windows\\System32\\wuauclt.exe",
+      "C:\\Windows\\System32\\wuaudt.exe",
+      "C:\\Program Files\\Windows Defender\\MsMpEng.exe",
+      "C:\\Program Files (x86)\\Windows Defender\\MsMpEng.exe"
+    ],
+    "tags": [
+      "windows",
+      "system-network-baseline"
+    ],
+    "risk_level": 3
+  },
+  {
+    "match_key": "comm",
+    "match_values": [
+      "C:\\Windows\\System32\\powershell.exe",
+      "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "C:\\Windows\\System32\\cmd.exe",
+      "C:\\Windows\\System32\\wscript.exe",
+      "C:\\Windows\\System32\\cscript.exe",
+      "C:\\Windows\\System32\\mshta.exe",
+      "C:\\Windows\\System32\\rundll32.exe",
+      "C:\\Windows\\System32\\regsvr32.exe",
+      "C:\\Windows\\System32\\certutil.exe",
+      "C:\\Windows\\System32\\bitsadmin.exe"
+    ],
+    "tags": [
+      "windows",
+      "non-browser-network",
+      "lolbin-network",
+      "suspicious-network"
+    ],
+    "risk_level": 1
+  },
+  {
+    "match_key": "user",
+    "match_values": [
+      "NT AUTHORITY\\SYSTEM",
+      "NT AUTHORITY\\NETWORK SERVICE",
+      "NT AUTHORITY\\LOCAL SERVICE"
+    ],
+    "tags": [
+      "windows",
+      "privileged-network-activity"
+    ],
+    "risk_level": 2
+  },
+  {
+    "match_key": "msg_type_str",
+    "match_values": [
+      "NETWORK_CONNECT"
+    ],
+    "tags": [
+      "windows",
+      "network-connect-burst-candidate"
+    ],
+    "risk_level": 2
+  },
+  {
+    "match_key": "cmd",
+    "match_values": [
+      "powershell.exe",
+      "pwsh.exe",
+      "cmd.exe",
+      "wscript.exe",
+      "cscript.exe",
+      "mshta.exe",
+      "rundll32.exe",
+      "regsvr32.exe",
+      "certutil.exe",
+      "bitsadmin.exe"
+    ],
+    "tags": [
+      "windows",
+      "non-browser-process",
+      "outbound-network-suspect"
+    ],
+    "risk_level": 1
+  },
+  {
+    "match_key": "tags",
+    "match_values": [
+      "windows-network",
+      "windows",
+      "network-connect"
+    ],
+    "tags": [
+      "windows-baselining",
+      "network-observed"
+    ],
+    "risk_level": 3
+  },
+  {
+    "match_key": "file",
+    "match_values": [
+      "C:\\tmp.txt"
+    ],
+    "tags": [],
+    "risk_level": 1
+  },
+  {
+    "match_key": "file",
+    "match_values": [
+      "C:\\a.txt"
+    ],
+    "tags": [],
+    "risk_level": 1
+  },
+  {
+    "match_key": "file",
+    "match_values": [
+      "C:\\home-gaurav\\a.txt"
+    ],
+    "tags": ["gaurav"],
+    "risk_level": 1
+  }
+]
