@@ -9,35 +9,98 @@
 # Live Server Dashboard
 ![Sentrilite Server_Dashboard](./live_dashboard.png)
 
-Sentrilite EDR/XDR for Windows is a lightweight Detection-as-Code (DAC), real-time runtime endpoint security and observability platform that streams structured system events to a live dashboard where custom rules determine risk scoring, tagging, alerting, and reporting.
+# Sentrilite EDR/XDR for Windows
 
-It provides a low-overhead endpoint security layer for Windows servers and workstations without relying on Sysmon or heavyweight EDR tools.
+Sentrilite EDR/XDR for Windows is a lightweight Detection-as-Code (DAC), real-time endpoint security and observability platform. It streams structured system events to a live dashboard where JSON rules drive risk scoring, tagging, alerting, and reporting.
 
-Sentrilite captures all process creation and termination (PROC_CREATE / PROC_TERMINATE), enriching events with:
-- Process Activity Monitoring (full executable path, parent PID, User/SID, timestamps, tags)
-  Rules can be created for: 
-  - Suspicious binaries (e.g., powershell.exe, wscript.exe, certutil.exe)
-  - LOLBins and lateral-movement tools
-  - Obfuscated or encoded script execution
-  - Unexpected parent-child process chains
-- File Access Monitoring (Rule-Driven): The Windows agent detects sensitive file usage via process arguments and custom file rules.
-  - Rules allow:
-    - High-risk alerts for reads/writes to sensitive paths
-    - Tagging events with categories such as exfiltration, credential-access, or custom tags
-- Network Activity Monitoring: Sentrilite monitors outbound connections via Windows networking APIs (GetExtendedTcpTable), producing events that include:
-  - Local/remote address + port
-  - Owning process
-  - Protocol
-  - User context
-- Detection-as-Code (DAC)
-  - Rules are simple JSON documents (custom_rules.json, security_rules.json):
-  - Hot reload on every modification
-  - No rebuilds, no restarts
-  - Match on any event field: cmd, arg1, user, ip, msg_type, tags, file, etc.
-  - Assign risk levels (1=high, 2=medium, 3=low)
-  - Add custom tags and metadata
-  - Trigger alerts automatically when conditions match
-  - This gives Windows administrators full programmability over detection logic.
+It provides a low-overhead endpoint security layer for Windows servers and workstations without requiring heavyweight EDR agents. If Sysmon is present, Sentrilite can automatically enrich coverage by ingesting Sysmon logs; if not, it falls back to its own native collectors.
+
+## What Sentrilite Collects on Windows
+
+### Process Activity Monitoring
+
+Sentrilite captures all process creation and termination and normalizes them into a unified event model:
+- Full executable path (cmd / comm)
+- Parent PID / child PID
+- User / SID context (e.g., NT AUTHORITY\SYSTEM, local users)
+- Timestamps
+- Tags (e.g., windows, process, powershell, lolbin-network)
+
+You can write rules for:
+- Suspicious binaries (e.g., powershell.exe, wscript.exe, certutil.exe)
+- LOLBins and lateral-movement tools (psexec.exe, wmic.exe, wmiprvse.exe)
+- Obfuscated or encoded script execution (e.g., -EncodedCommand, FromBase64String()
+- Unexpected parent-child chains (e.g., winword.exe → powershell.exe)
+
+### File Access Monitoring (Rule-Driven)
+
+The Windows agent detects sensitive file usage via process arguments and custom file rules, using custom_rules.json and sensitive_files.json:
+- High-risk alerts for reads/writes to sensitive paths (credentials, config, keys, etc.)
+- Tag events with categories such as:
+- exfiltration
+- credential-access
+- custom tags like "gaurav" for your own watch files
+
+### Network Activity Monitoring
+
+Sentrilite monitors outbound connections via Windows networking APIs (GetExtendedTcpTable), producing events that include:
+- Local address / port
+- Remote address / port
+- Protocol (TCP)
+- Owning process (image path)
+- User context
+- Basic connection state (LISTEN, ESTABLISHED, etc.)
+- Rules can differentiate between:
+- Browser baseline traffic vs. non-browser processes making external connections
+- System services vs. unexpected user processes
+- Access to special IPs (e.g., cloud metadata 169.254.169.254)
+
+### Optional Sysmon-Aware Enrichment
+
+If Sysmon and the Microsoft-Windows-Sysmon/Operational log are available, Sentrilite starts a Sysmon reader loop that:
+- Polls Sysmon events via Get-WinEvent
+- Maps them into the same Event structure as native events
+- Adds a sysmon tag plus category tags:
+- process (Event ID 1)
+- network (ID 3)
+- driver (ID 6)
+- module-load (ID 7)
+- file (ID 11)
+- registry (IDs 12, 13, 14)
+- wmi (IDs 19, 20, 21)
+- dns, network (ID 22)
+- Keeps Arg1 concise and structured (short summaries rather than raw multi-line blobs)
+
+### Key point:
+
+Sentrilite works without Sysmon, but if Sysmon is installed, you automatically get richer coverage with the same rule engine, same WebSocket pipeline, and same alert model.
+
+### Detection-as-Code (DAC)
+
+Detection logic is fully programmable using JSON:
+Rule files:
+- custom_rules.json
+- windows_security_rules.json (Details in WINDOWS_SECURITY_RULES_DESCRIPTION.md)
+- sensitive_files.json
+
+### Hot reload:
+
+Rule files are reloaded on change — no rebuilds, no restarts.
+Match on any event field, including:
+- cmd, comm
+- arg1 (first argument / summarized payload)
+- user
+- ip
+- msg_type_str (e.g., PROCESS_CREATE, SYSMON_DNS_QUERY)
+- tags
+- aliases like file, iid mapped into shared fields
+Rules can:
+- Assign risk levels: 1 = high, 2 = medium, 3 = low
+- Add custom tags for later correlation / dashboards
+- Trigger alerts automatically when conditions match
+  (e.g., high-risk PowerShell with encoded commands, LSASS access, non-browser outbound network, WMI-based lateral movement)
+
+This gives Windows administrators full programmability over detection logic without touching code.
 
 ---
 

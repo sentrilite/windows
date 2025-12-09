@@ -1,0 +1,2421 @@
+<!--
+Copyright (c) 2025 Sentrilite, Inc. All rights reserved.
+
+This software is the confidential and proprietary information of
+Sentrilite ("Confidential Information"). You shall not
+disclose such Confidential Information and shall use it only
+in accordance with the terms of the license agreement you entered
+into with Sentrilite.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sentrilite Main Dashboard</title>
+  <!-- script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script -->
+</head>
+<style>
+  :root {
+    --primary: #00ff99;
+    --secondary: #00bfff;
+    --bg: #000000;
+    --card-bg: #101a2b;
+    --text: #e6f1ff;
+    --muted: #a8b2d1;
+    --border: rgba(0, 255, 153, 0.15);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  header {
+    background: linear-gradient(90deg, #000 70%, #00bfff22 100%);
+    padding: 1.25rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  header span {
+    font-size: 1.75rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 15px rgba(0, 255, 153, 0.3);
+  }
+
+  button {
+    background: var(--card-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  button:hover {
+    border-color: var(--primary);
+    box-shadow: 0 0 10px rgba(0, 255, 153, 0.2);
+  }
+
+  .primary-button {
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    color: var(--bg);
+    border: none;
+    font-weight: 600;
+  }
+
+  .primary-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 15px rgba(0, 255, 153, 0.3);
+  }
+
+  #upload-section {
+    background: linear-gradient(120deg, #000 60%, #00bfff11 100%);
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .container {
+    display: flex;
+    flex: 1;
+    background: linear-gradient(120deg, #000 60%, #00bfff11 100%);
+  }
+
+  aside {
+    width: 280px;
+    background: var(--card-bg);
+    border-right: 1px solid var(--border);
+    padding: 1.5rem;
+  }
+
+  .rule-box {
+    margin-bottom: 2rem;
+  }
+
+  .rule-box h3 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+  }
+
+  /* Rules display styles */
+  .rules-container {
+    max-height: 300px;
+    overflow-y: auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .rule-item {
+    background: rgba(0, 255, 153, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .rule-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .rule-type {
+    color: var(--primary);
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+  }
+
+  .rule-details {
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  .no-rules {
+    color: var(--muted);
+    text-align: center;
+    font-style: italic;
+    padding: 1rem;
+  }
+
+  .loading-rules {
+    color: var(--secondary);
+    text-align: center;
+    padding: 1rem;
+  }
+
+  input[type="text"],
+  input[type="number"] {
+    width: 100%;
+    padding: 0.625rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+  }
+
+  input[type="text"]:focus,
+  input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 10px rgba(0, 255, 153, 0.1);
+  }
+
+  main {
+    flex: 1;
+    padding: 1.5rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card-bg);
+    margin-top: 1rem;
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+
+  th {
+    background: rgba(0, 255, 153, 0.05);
+    padding: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    border: 1px solid var(--border);
+    color: var(--primary);
+  }
+
+  td {
+    padding: 0.75rem;
+    text-align: center;
+    border: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  tr:hover {
+    background: rgba(0, 255, 153, 0.02);
+  }
+
+  .online {
+    color: var(--primary);
+    font-weight: bold;
+  }
+
+  .offline {
+    color: #e74c3c;
+    font-weight: bold;
+  }
+
+  .critical {
+    color: #f39c12;
+    font-weight: bold;
+  }
+
+  .none {
+    color: var(--muted);
+  }
+
+  #insight-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--card-bg);
+    padding: 2rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    max-width: 600px;
+    width: 90%;
+    display: none;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+  }
+
+  #rules-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--card-bg);
+    padding: 2rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    max-width: 800px;
+    width: 90%;
+    max-height: 80vh;
+    display: none;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    overflow-y: auto;
+  }
+
+  #rules-popup h3 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+  }
+
+  #rules-content {
+    max-height: 60vh;
+    overflow-y: auto;
+    margin: 1rem 0;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  a {
+    color: var(--secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+  }
+
+  a:hover {
+    color: var(--primary);
+  }
+
+  footer {
+    background: var(--card-bg);
+    padding: 1rem;
+    text-align: center;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+
+  /* Checkbox styling */
+  input[type="checkbox"] {
+    accent-color: var(--primary);
+  }
+
+  /* Radio button styling */
+  input[type="radio"] {
+    accent-color: var(--primary);
+  }
+
+  /* Mobile Responsiveness */
+  @media (max-width: 1024px) {
+    .container {
+      flex-direction: column;
+    }
+
+    aside {
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+  }
+
+  @media (max-width: 768px) {
+    header {
+      padding: 1rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    header span {
+      font-size: 1.25rem;
+    }
+
+    main {
+      padding: 1rem;
+    }
+
+    th, td {
+      padding: 0.5rem;
+      font-size: 0.875rem;
+    }
+  }
+</style>
+<body>
+<header>
+  <span>Sentrilite: Hybrid-Cloud Observability & Security</span>
+<button onclick="downloadHumanReport()" style="
+  font-size: 1.0rem;
+  padding: 4px 6px;
+  background: linear-gradient(90deg, #00cc7a, #0099cc);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: 30em;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 255, 153, 0.15);
+">
+  📄 Download PDF Report
+</button>
+
+<a href="#" id="download-link" style="font-size: 15px;" onclick="generateCombinedAlerts(); return false;">
+  📁 Download Combined Alerts (JSON)
+</a>
+
+</header>
+
+<div id="upload-section" style="position: relative; margin-bottom: 10px;">
+
+  <!-- Centered upload controls -->
+  <div style="text-align: center;">
+    <input type="file" id="serverFile" accept=".txt" />
+    <button onclick="uploadServers()">Upload Node List</button>
+    <button onclick="exportDashboard()">Download Dashboard</button>
+    <label style="margin-left: 1em;">
+      <input type="checkbox" id="checkAll" onchange="toggleAllServers(this)">
+      Select All
+    </label>
+  </div>
+
+  <!-- Absolutely positioned right-aligned link -->
+  <a href="#" onclick="clearAllCriticalAlerts(); return false;"
+     style="position: absolute; top: 0; right: 0; font-size: 15px; text-decoration: underline; color: #c00;">
+    🧹 Clear All Alerts
+  </a>
+</div>
+
+</div>
+
+<div class="container">
+  <aside>
+    <div class="rule-box">
+      <h3>⛨ Create Rule</h3>
+      <input id="edr-key" placeholder="match_key (e.g. cmd)" />
+      <input id="edr-values" placeholder="match_values (comma separated)" />
+      <input id="edr-tags" placeholder="tags (comma separated)" />
+      <input id="edr-risk" type="number" min="1" max="3" placeholder="risk level" />
+      <input id="edr-tag-filter" placeholder="server_tag (default: all)" />
+      <button onclick="applyEDRRule()">Apply to Selected</button>
+    </div>
+    <div class="rule-box">
+      <h3>🧠 View Rules</h3>
+      <button onclick="viewAllRules()" style="width: 100%;">View All Rules</button>
+    </div>
+    <div class="rule-box">
+      <h3>🗑️ Delete Rules</h3>
+      <button onclick="deleteAllRules()" style="width: 100%;">Delete All Rules</button>
+    </div>
+    <div class="rule-box">
+      <h3>🛡️ Network Rule</h3>
+      <label><input type="radio" name="xdr-action" value="block" checked /> Block</label>
+      <label><input type="radio" name="xdr-action" value="allow" /> Allow</label>
+      <input id="xdr-ip" placeholder="IP Address (optional)" />
+      <input id="xdr-port" placeholder="Port or Range (e.g. 80 or 1000-2000)" />
+      <input id="xdr-tag-filter" placeholder="server_tag (default: all)" />
+      <button onclick="applyXDRRule()">Apply to Selected</button>
+    </div>
+    <div class="rule-box">
+      <h3>🧠 View Network Rules</h3>
+      <button onclick="viewAllXDRRules()" style="width: 100%;">View All Network Rules</button>
+    </div>
+    <div class="rule-box">
+      <h3>🗑️ Delete Network Rules</h3>
+      <button onclick="deleteAllXDRRules()" style="width: 100%;">Delete All Network Rules</button>
+    </div>
+  </aside>
+
+  <main>
+    <table>
+      <thead>
+        <tr>
+          <th>Select</th>
+          <th>Server IP</th>
+          <th>Status</th>
+          <th>Alerts</th>
+          <th>Groups</th>
+          <th>Dashboard</th>
+          <th>AI Insights</th>
+        </tr>
+      </thead>
+      <tbody id="serverTableBody"></tbody>
+    </table>
+  </main>
+</div>
+
+<footer>
+  © 2025 Sentrilite Inc. All rights reserved. Contact: info@Sentrilite.com
+</footer>
+
+<div id="insight-popup">
+  <h3>🔍 LLM Insight</h3>
+  <div id="insight-content"></div>
+  <button onclick="document.getElementById('insight-popup').style.display='none'">❌ Close</button>
+</div>
+
+<div id="rules-popup">
+  <h3>🧠 All Rules</h3>
+  <div id="rules-content"></div>
+  <button onclick="closeRulesPopup()">❌ Close</button>
+</div>
+<script src="jspdf.umd.min.js"></script>
+<script>window.jsPDF = window.jspdf.jsPDF;</script>
+<script>
+const insightsCache = {};   // 🧠 { ip: { text: "...", timestamp: 123456 } }
+const alertsSnapshot = {};  // 🧠 { ip: "alerts-stringified" }
+
+function toggleAllServers(checkbox) {
+  document.querySelectorAll(".select-server").forEach(cb => cb.checked = checkbox.checked);
+}
+
+function uploadServers() {
+  const file = document.getElementById('serverFile').files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const lines = reader.result.split('\n').map(line => line.trim()).filter(Boolean);
+    const tbody = document.getElementById("serverTableBody");
+    tbody.innerHTML = "";
+
+    lines.forEach(line => {
+      const [ip, group = ""] = line.split(',').map(x => x.trim());
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td><input type="checkbox" class="select-server" data-ip="${ip}" /></td>
+        <td>${ip}</td>
+        <td id="status-${ip}">⏳</td>
+        <td id="alert-${ip}">⏳</td>
+        <td contenteditable="true" id="group-${ip}">${group}</td>
+        <td><a href="http://${ip}/dashboard.html" target="_blank">Open</a></td>
+        <td>
+          <a href="#" onclick="showInsight('${ip}')" id="insight-link-${ip}">View</a> |
+          <a href="#" onclick="refreshInsightManually('${ip}')" style="color: #00c3ff;">🔄</a>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+
+    refreshAll();
+    setInterval(refreshAll, 5000); // ⏲️ Re-check health every 5 seconds
+  };
+  reader.readAsText(file);
+}
+
+function refreshAll() {
+  document.querySelectorAll(".select-server").forEach(cb => {
+    const ip = cb.dataset.ip;
+    const ws = new WebSocket(`ws://${ip}:8765`);
+    let isHealthy = false;
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "health" }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "health") {
+          isHealthy = true;
+          document.getElementById(`status-${ip}`).innerHTML = `<span class="online">Online</span>`;
+
+          const alertText = (data.alert_status === "Critical")
+            ? `<a href="#" onclick="showAlertsPopup('${ip}'); return false;" style="color: #f39c12; font-weight: bold; text-decoration: underline;">Critical</a>`
+            : `<span class="none">None</span>`;
+          document.getElementById(`alert-${ip}`).innerHTML = alertText;
+
+          // Remove automatic LLM fetching - only fetch when user clicks "View"
+          if (data.alert_status !== "Critical") {
+            delete insightsCache[ip]; // No critical alerts, remove old insight
+          }
+        }
+      } catch (err) {
+        console.error("WebSocket parsing error:", err);
+      } finally {
+        ws.close(); // ✅ Close only after finished parsing
+      }
+    };
+
+    ws.onerror = () => {
+      document.getElementById(`status-${ip}`).innerHTML = `<span class="offline">Unreachable</span>`;
+      document.getElementById(`alert-${ip}`).innerHTML = `<span class="none">Unknown</span>`;
+    };
+
+    ws.onclose = () => {
+      if (!isHealthy) { // ✅ Only mark offline if never got a good message
+        document.getElementById(`status-${ip}`).innerHTML = `<span class="offline">Unreachable</span>`;
+        document.getElementById(`alert-${ip}`).innerHTML = `<span class="none">Unknown</span>`;
+      }
+    };
+  });
+}
+
+function fetchAlertsAndInsights(ip, force = false) {
+  const ws = new WebSocket(`ws://${ip}:8765`);
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: "get_alerts" }));
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "alert_list" && Array.isArray(data.alerts)) {
+        const newSnapshot = JSON.stringify(data.alerts);
+
+        if (!force && alertsSnapshot[ip] === newSnapshot) {
+          console.log(`ℹ️ No change in alerts for ${ip}. Skipping LLM refresh.`);
+          ws.close();
+          return;
+        }
+
+        alertsSnapshot[ip] = newSnapshot; // 📦 Save new alerts snapshot
+
+        const alertText = data.alerts.map(a => `[${a.time}] ${a.message}`).join("\n");
+
+        const prompt = `### Instruction:\nYou are a cybersecurity expert. Summarize and assess the following alerts for server ${ip}. Indicate severity and suggest remediation.\n\n### Input:\n${alertText}\n\n### Response:\n`;
+
+        fetch('http://ec2-3-144-169-112.us-east-2.compute.amazonaws.com:3000/completion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: prompt,
+            n_predict: 512,
+            temperature: 0.2,
+            stream: false
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.content) {
+            insightsCache[ip] = { text: data.content, timestamp: Date.now() };
+            console.log(`✅ Insight updated for ${ip}`);
+
+            // Update the popup content if it's currently open for this IP
+            const popup = document.getElementById("insight-popup");
+            if (popup.style.display === "block") {
+              const contentDiv = document.getElementById("insight-content");
+              contentDiv.innerHTML = `
+                <div style="margin-bottom: 1em;">${data.content}</div>
+                <button onclick="refreshInsightManually('${ip}')" style="background: var(--highlight); color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer;">🔄 Refresh Insight</button>
+              `;
+            }
+          } else {
+            console.error("⚠️ LLM server returned no content");
+            // Update popup with error message
+            const popup = document.getElementById("insight-popup");
+            if (popup.style.display === "block") {
+              const contentDiv = document.getElementById("insight-content");
+              contentDiv.innerHTML = `
+                <div style="color: #e74c3c; margin-bottom: 1em;">❌ Failed to generate AI insights. Please try again.</div>
+                <button onclick="refreshInsightManually('${ip}')" style="background: var(--highlight); color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer;">🔄 Retry</button>
+              `;
+            }
+          }
+        })
+        .catch(err => {
+          console.error("❌ LLM fetch error:", err);
+          // Update popup with error message
+          const popup = document.getElementById("insight-popup");
+          if (popup.style.display === "block") {
+            const contentDiv = document.getElementById("insight-content");
+            contentDiv.innerHTML = `
+              <div style="color: #e74c3c; margin-bottom: 1em;">❌ Failed to generate AI insights: ${err.message}</div>
+              <button onclick="refreshInsightManually('${ip}')" style="background: var(--highlight); color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer;">🔄 Retry</button>
+            `;
+          }
+        });
+      }
+    } catch (err) {
+      console.error("WebSocket alert fetch error:", err);
+    } finally {
+      ws.close(); // ✅ Always close after processing
+    }
+  };
+
+  ws.onerror = (err) => {
+    console.error(`❌ WebSocket error fetching alerts from ${ip}:`, err);
+  };
+}
+
+function showInsight(ip) {
+  // Check if we have cached insights
+  const cachedInsight = insightsCache[ip];
+
+  if (cachedInsight) {
+    // Show cached insight immediately
+    const contentDiv = document.getElementById("insight-content");
+    contentDiv.innerHTML = `
+      <div style="margin-bottom: 1em;">${cachedInsight.text}</div>
+      <button onclick="refreshInsightManually('${ip}')" style="background: var(--highlight); color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer;">🔄 Refresh Insight</button>
+    `;
+    document.getElementById("insight-popup").style.display = "block";
+  } else {
+    // Show loading and fetch fresh insights
+    const contentDiv = document.getElementById("insight-content");
+    contentDiv.innerHTML = '<div style="text-align: center; padding: 2rem;">🔄 Generating AI insights...</div>';
+    document.getElementById("insight-popup").style.display = "block";
+
+    // Fetch alerts and generate insights
+    fetchAlertsAndInsights(ip, true);
+  }
+}
+
+function refreshInsightManually(ip) {
+  fetchAlertsAndInsights(ip, true); // 🔥 Always force refresh
+}
+
+function applyRule(rule, tagFilter, isXDR = false) {
+  const allServers = Array.from(document.querySelectorAll(".select-server"));
+  const tag = (tagFilter || "").trim().toUpperCase();
+
+  const targets = allServers.filter(cb => {
+    const ip = cb.dataset.ip;
+    const cell = document.getElementById(`group-${ip}`);
+    const groupText = cell?.textContent || "";
+    const groupTags = groupText.split(',').map(t => t.trim().toUpperCase()).filter(Boolean);
+    const matchesGroup = !tag || groupTags.includes(tag);
+    return cb.checked || matchesGroup;
+  }).map(cb => cb.dataset.ip);
+
+  if (!targets.length) {
+    const selectedGroups = allServers.map(cb => {
+      const ip = cb.dataset.ip;
+      const cell = document.getElementById(`group-${ip}`);
+      return `IP=${ip}, Group=${cell?.textContent.trim() || '(none)'}`;
+    });
+    console.log(`No matching servers for ${isXDR ? 'XDR' : 'EDR'} Rule. Groups:`);
+    selectedGroups.forEach(g => console.log(g));
+    return;
+  }
+
+  alert(`📋 Dispatching rule to servers: ${targets.join(', ')}`);
+
+  targets.forEach(ip => {
+    const ws = new WebSocket(`ws://${ip}:8765`);
+    ws.onopen = () => {
+      ws.send(JSON.stringify(rule));
+      ws.close();
+    };
+  });
+
+  alert(`✅ ${isXDR ? 'XDR' : 'EDR'} Rule dispatched to ${targets.length} server(s).`);
+}
+
+function applyEDRRule() {
+  const key = document.getElementById("edr-key").value.trim();
+  const values = document.getElementById("edr-values").value.split(",").map(v => v.trim()).filter(Boolean);
+  const tags = document.getElementById("edr-tags").value.split(",").map(v => v.trim()).filter(Boolean);
+  const risk = parseInt(document.getElementById("edr-risk").value);
+  const tagFilter = document.getElementById("edr-tag-filter").value.trim();
+
+  if (!key || !values.length || ![1, 2, 3].includes(risk)) {
+    return alert("❌ Please provide valid EDR rule parameters.");
+  }
+
+  const rule = {
+    type: "add_rule",
+    match_key: key,
+    match_values: values,
+    tags: tags,
+    risk_level: risk
+  };
+
+  applyRule(rule, tagFilter);
+}
+
+function applyXDRRule() {
+  const action = document.querySelector('input[name="xdr-action"]:checked').value;
+  const ipVal = document.getElementById("xdr-ip").value.trim();
+  const port = document.getElementById("xdr-port").value.trim();
+  const tagFilter = document.getElementById("xdr-tag-filter").value.trim();
+
+  if (!ipVal && !port) return alert("Please specify at least IP or Port.");
+
+  const rule = {
+    type: "add_xdr_rule",
+    rule_type: action,
+    value: { ip: ipVal, port }
+  };
+
+  applyRule(rule, tagFilter, true);
+}
+
+function exportDashboard() {
+  const rows = document.querySelectorAll("#serverTableBody tr");
+  const lines = [];
+
+  rows.forEach(row => {
+    const ip = row.querySelector(".select-server")?.dataset.ip;
+    const group = document.getElementById(`group-${ip}`)?.textContent.trim();
+    lines.push(`${ip}${group ? ',' + group : ''}`);
+  });
+
+  const blob = new Blob([lines.join('\n')], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "dashboard_export.txt";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// IMPROVED: Better error handling and debugging for PDF generation
+async function downloadHumanReport() {
+  const rows = Array.from(document.querySelectorAll(".select-server"));
+  if (rows.length === 0) {
+    alert("No servers found! Please upload a server list first.");
+    return;
+  }
+
+  // Filter to only online servers
+  const onlineServers = rows.filter(row => {
+    const ip = row.dataset.ip;
+    const statusCell = document.getElementById(`status-${ip}`);
+    return statusCell && statusCell.textContent.includes("Online");
+  });
+
+  if (onlineServers.length === 0) {
+    alert("No online servers found. Please wait for servers to come online.");
+    return;
+  }
+
+  console.log(`📊 Fetching alerts from ${onlineServers.length} online server(s)...`);
+
+  const results = await Promise.all(onlineServers.map(async row => {
+    const ip = row.dataset.ip;
+    console.log(`🔄 Fetching alerts from ${ip}...`);
+    try {
+      const alerts = await fetchAlertsFromServer(ip, 25000, true); // Increased timeout to 25 seconds
+      const alertCount = Array.isArray(alerts) ? alerts.length : 0;
+      console.log(`✅ Got ${alertCount} alerts from ${ip}`);
+      return { ip, alerts: Array.isArray(alerts) ? alerts : [], success: true, alertCount };
+    } catch (err) {
+      console.error(`❌ Failed to fetch alerts from ${ip}:`, err);
+      return { ip, alerts: [], success: false, alertCount: 0, error: err.message };
+    }
+  }));
+
+  // Log summary
+  const successful = results.filter(r => r.success && r.alertCount > 0);
+  const failed = results.filter(r => !r.success);
+  const empty = results.filter(r => r.success && r.alertCount === 0);
+  
+  console.log(`📊 Fetch Summary:`);
+  console.log(`   ✅ Successful: ${successful.length} server(s) with alerts`);
+  successful.forEach(r => console.log(`      - ${r.ip}: ${r.alertCount} alerts`));
+  if (empty.length > 0) {
+    console.log(`   ⚠️ Empty: ${empty.length} server(s) with no alerts`);
+    empty.forEach(r => console.log(`      - ${r.ip}: 0 alerts`));
+  }
+  if (failed.length > 0) {
+    console.log(`   ❌ Failed: ${failed.length} server(s)`);
+    failed.forEach(r => console.log(`      - ${r.ip}: ${r.error || 'Connection failed'}`));
+  }
+
+  const combinedAlerts = [];
+  results.forEach(r => {
+    if (r.success && Array.isArray(r.alerts)) {
+      r.alerts.forEach(a => {
+        combinedAlerts.push({
+          ...a,
+          __server: r.ip
+        });
+      });
+    }
+  });
+
+  if (combinedAlerts.length === 0) {
+    const message = `No alerts found from any server.\n\n` +
+      `Queried ${onlineServers.length} online server(s).\n` +
+      `Successful: ${successful.length}\n` +
+      `Failed: ${failed.length}\n` +
+      `Empty: ${empty.length}\n\n` +
+      `Check browser console for details.`;
+    alert(message);
+    return;
+  }
+
+  // Show user-friendly summary
+  const summaryMessage = `Fetched alerts from ${successful.length} server(s):\n` +
+    successful.map(r => `  • ${r.ip}: ${r.alertCount} alerts`).join('\n') +
+    (failed.length > 0 ? `\n\nFailed to fetch from ${failed.length} server(s). Check console.` : '') +
+    `\n\nGenerating PDF report...`;
+  console.log(summaryMessage);
+
+  const metrics         = computeAlertMetrics(combinedAlerts);
+  const nodeRiskMap     = computeNodeRiskMap(combinedAlerts);
+  const nowStr          = new Date().toLocaleString();
+  const respondingNodes = results.filter(r => r.success && r.alertCount > 0).length;
+
+  const doc         = new jsPDF();
+  const nodeAnchors = {};
+
+  // Build details first (page 2+), record anchors
+  buildDetailsPages(doc, combinedAlerts, nodeAnchors);
+
+  // Go back to page 1 and render summary using anchors
+  doc.setPage(1);
+  buildSummaryPage(doc, combinedAlerts, metrics, nowStr, respondingNodes, nodeRiskMap, nodeAnchors);
+
+  doc.save("Sentrilite_Combined_Report.pdf");
+  console.log(`✅ PDF report generated with ${combinedAlerts.length} total alerts from ${respondingNodes} node(s)`);
+}
+
+function computeNodeRiskMap(alerts) {
+  const map = {};
+  alerts.forEach(a => {
+    const node = a.__server || "unknown-node";
+    if (!map[node]) {
+      map[node] = { 1: 0, 2: 0, 3: 0, other: 0 };
+    }
+    const r = normalizeRiskLevel(a);
+    if (r === 1 || r === 2 || r === 3) {
+      map[node][r]++;
+    } else {
+      map[node].other++;
+    }
+  });
+  return map;
+}
+
+function getRiskRGB(level) {
+  const r = normalizeRiskLevel({ risk_level: level });
+  if (r === 1) return [200, 0, 0];       // 🔴 High
+  if (r === 2) return [230, 120, 0];     // 🟠 Medium
+  if (r === 3) return [0, 140, 0];       // 🟢 Low
+  return [80, 80, 80];                   // ⚫ Other/unknown
+}
+
+function normalizeRiskLevel(alert) {
+  let v = alert.risk_level ?? alert.RiskLevel ?? alert.severity;
+  if (typeof v === "number") return v;
+  if (typeof v === "string") {
+    const n = parseInt(v, 10);
+    if (!isNaN(n)) return n;
+    const s = v.toLowerCase();
+    if (s === "critical" || s === "high") return 1;
+    if (s === "medium") return 2;
+    if (s === "low") return 3;
+  }
+  return 0; // unknown/other
+}
+
+function topNFromCounts(counts, maxItems, minCount) {
+  return Object.entries(counts)
+    .filter(([k, c]) => k && c >= (minCount || 1))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, maxItems);
+}
+
+function computeAlertMetrics(alerts) {
+  const riskCounts = { 1: 0, 2: 0, 3: 0, other: 0 };
+  const ipCounts = {};
+  const procCounts = {};
+  const tagCounts = {};
+
+  alerts.forEach(a => {
+    const risk = normalizeRiskLevel(a);
+    if (risk === 1 || risk === 2 || risk === 3) {
+      riskCounts[risk]++;
+    } else {
+      riskCounts.other++;
+    }
+
+    const ip = a.ip || a.IP || "";
+    if (ip && ip !== "127.0.0.1") { // Filter out localhost
+      ipCounts[ip] = (ipCounts[ip] || 0) + 1;
+    }
+
+    const cmd = a.cmd || a.Comm || a.comm || a.message || a.msg || "";
+    if (cmd) {
+      const key = cmd.length > 80 ? cmd.slice(0, 77) + "..." : cmd;
+      procCounts[key] = (procCounts[key] || 0) + 1;
+    }
+
+    const tags = Array.isArray(a.tags) ? a.tags : [];
+    tags.forEach(t => {
+      if (!t || typeof t !== "string") return;
+      const tag = t.trim();
+      // Filter noisy tags like "linux", "host:xyz", "count:1" etc
+      if (!tag || tag.toLowerCase() === "linux") return;
+      if (tag.startsWith("host:")) return;
+      if (tag.startsWith("count:")) return;
+      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+    });
+  });
+
+  const topTags = topNFromCounts(tagCounts, 10, 1);
+  const topProcesses = topNFromCounts(procCounts, 5, 5);
+  const topIPs = topNFromCounts(ipCounts, 5, 5);
+
+  return {
+    riskCounts,
+    ipCounts,
+    procCounts,
+    tagCounts,
+    topTags,
+    topProcesses,
+    topIPs
+  };
+}
+
+function createPieChartDataURL(riskCounts) {
+  const total = (riskCounts[1] || 0) + (riskCounts[2] || 0) + (riskCounts[3] || 0);
+  if (total === 0) return null;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 200;
+  canvas.height = 200;
+  const ctx = canvas.getContext("2d");
+
+  const cx = 100;
+  const cy = 100;
+  const r = 80;
+
+  const segments = [
+    { value: riskCounts[1] || 0, color: "#e74c3c" }, // red
+    { value: riskCounts[2] || 0, color: "#f39c12" }, // orange
+    { value: riskCounts[3] || 0, color: "#27ae60" }  // green
+  ];
+
+  let startAngle = -Math.PI / 2; // start at top
+  segments.forEach(seg => {
+    if (seg.value <= 0) return;
+    const angle = (seg.value / total) * Math.PI * 2;
+    const endAngle = startAngle + angle;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+
+    startAngle = endAngle;
+  });
+
+  // thin white circle border for crispness
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  return canvas.toDataURL("image/png");
+}
+
+function buildSummaryPage(
+  doc,
+  alerts,
+  metrics,
+  generatedAt,
+  respondingNodes,
+  nodeRiskMap,
+  nodeAnchors
+) {
+  const totalAlerts = alerts.length;
+  const { riskCounts, topTags, topProcesses, topIPs } = metrics;
+
+  // ---------- Header (similar to app.py draw_header) ----------
+  doc.setFontSize(18);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(0, 0, 0);
+  doc.text("Sentrilite Alert Report", 20, 20);
+
+  const isoLike = new Date().toISOString().replace(/\.\d+Z$/, "Z");
+  doc.setFontSize(10);
+  doc.setTextColor(60, 60, 60);
+  doc.text(`Generated at: ${isoLike}`, 20, 26);
+  doc.line(20, 28, 190, 28);
+
+  // ---------- Label above pie chart ----------
+  doc.setFontSize(14);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(20, 20, 20);
+  doc.text("Combined Alerts Distribution", 20, 36);
+
+  // ---------- Pie chart on LEFT ----------
+  const pieDataURL = createPieChartDataURL(riskCounts);
+  if (pieDataURL) {
+    const pieX = 20;
+    const pieY = 40;
+    const pieSize = 70;
+    doc.addImage(pieDataURL, "PNG", pieX, pieY, pieSize, pieSize);
+  }
+
+  // ---------- Legend + Alert Breakdown on RIGHT ----------
+  const legendX = 120;
+  let legendY   = 36;   // line for "Risk Color Legend"
+
+  doc.setFontSize(9);
+  doc.setTextColor(20, 20, 20);
+  doc.text("Risk Color Legend", legendX, legendY);
+  legendY += 8; // ⬅ extra spacing below the line
+
+  // Red
+  doc.setFillColor(231, 76, 60);
+  doc.rect(legendX, legendY - 4, 4, 4, "F");
+  doc.setTextColor(40, 40, 40);
+  doc.text("Critical / High risk – immediate triage", legendX + 6, legendY);
+  legendY += 5;
+
+  // Orange
+  doc.setFillColor(243, 156, 18);
+  doc.rect(legendX, legendY - 4, 4, 4, "F");
+  doc.text("Medium risk – monitor & investigate", legendX + 6, legendY);
+  legendY += 5;
+
+  // Green
+  doc.setFillColor(39, 174, 96);
+  doc.rect(legendX, legendY - 4, 4, 4, "F");
+  doc.text("Informational / low risk", legendX + 6, legendY);
+  legendY += 8;
+
+  const highCount   = riskCounts[1] || 0;
+  const mediumCount = riskCounts[2] || 0;
+  const lowCount    = riskCounts[3] || 0;
+  const otherCount  = riskCounts.other || 0;
+  const totalCount  = highCount + mediumCount + lowCount + otherCount;
+
+  doc.setFontSize(10);
+  doc.setTextColor(20, 20, 20);
+  doc.text("Alert Breakdown", legendX, legendY);
+  legendY += 6;
+
+  doc.setFontSize(9);
+  doc.setTextColor(40, 40, 40);
+  doc.text(`High Risk: ${highCount}`, legendX, legendY);     legendY += 5;
+  doc.text(`Medium Risk: ${mediumCount}`, legendX, legendY); legendY += 5;
+  doc.text(`Low Risk: ${lowCount}`, legendX, legendY);       legendY += 5;
+  if (otherCount > 0) {
+    doc.text(`Other: ${otherCount}`, legendX, legendY);
+    legendY += 5;
+  }
+  doc.text(`Total: ${totalCount}`, legendX, legendY);
+  legendY += 6;
+
+  doc.setTextColor(80, 80, 80);
+  doc.text(`Total alerts (all nodes): ${totalAlerts}`, legendX, legendY);
+  legendY += 4;
+  doc.text(`Responding nodes: ${respondingNodes}`, legendX, legendY);
+
+  // ---------- Tags Summary (LEFT, below pie) ----------
+  let tagsY = 125; // clearly below pie+legend
+  doc.setFontSize(11);
+  doc.setTextColor(20, 20, 20);
+  doc.text("Tags Summary (top 10):", 20, tagsY);
+  tagsY += 6;
+
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
+  if (!topTags || topTags.length === 0) {
+    doc.text("No meaningful tags present in alerts.", 23, tagsY);
+    tagsY += 5;
+  } else {
+    topTags.forEach(([tag, count]) => {
+      const line = `${tag}: ${count}`;
+      doc.text(line, 23, tagsY);
+      tagsY += 4.5;
+    });
+  }
+
+  // ---------- Node Risk Overview (show ALL nodes, under Tags Summary) ----------
+  let nodesY = tagsY + 6;
+  const nodes = Object.keys(nodeRiskMap || {}).sort(); // show all nodes
+
+  doc.setFontSize(11);
+  doc.setTextColor(20, 20, 20);
+  doc.text("Node Risk Overview", 20, nodesY);
+  nodesY += 6;
+
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
+
+  if (!nodes.length) {
+    doc.text("No node-level risk breakdown available.", 23, nodesY);
+    nodesY += 5;
+  } else {
+    nodes.forEach(node => {
+      const counts = nodeRiskMap[node] || { 1: 0, 2: 0, 3: 0, other: 0 };
+      const anchor = nodeAnchors && nodeAnchors[node];
+
+      const nameX = 23;
+      const rowY  = nodesY;
+
+      // Clickable node name, if anchor known
+      if (anchor) {
+        doc.setTextColor(0, 0, 180);
+        doc.textWithLink(node, nameX, rowY, {
+          pageNumber: anchor.page,
+          y: anchor.y
+        });
+      } else {
+        doc.setTextColor(60, 60, 60);
+        doc.text(node, nameX, rowY);
+      }
+
+      let colX = 130; // Increased spacing from node name to prevent overlap
+
+      // Red box + count
+      doc.setFillColor(231, 76, 60);
+      doc.rect(colX, rowY - 3, 4, 4, "F");
+      doc.setTextColor(40, 40, 40);
+      doc.text(String(counts[1] || 0), colX + 6, rowY);
+      colX += 22;
+
+      // Orange box + count
+      doc.setFillColor(243, 156, 18);
+      doc.rect(colX, rowY - 3, 4, 4, "F");
+      doc.text(String(counts[2] || 0), colX + 6, rowY);
+      colX += 22;
+
+      // Green box + count
+      doc.setFillColor(39, 174, 96);
+      doc.rect(colX, rowY - 3, 4, 4, "F");
+      doc.text(String(counts[3] || 0), colX + 6, rowY);
+
+      nodesY += 5.5;
+    });
+  }
+
+  // ---------- Top Processes / Commands (RIGHT, aligned with Tags Summary heading) ----------
+  let procsX = 120;
+  let procsY = 125;
+
+  doc.setFontSize(11);
+  doc.setTextColor(20, 20, 20);
+  doc.text("Top Processes / Commands", procsX, procsY);
+  procsY += 6;
+
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
+  if (!topProcesses || topProcesses.length === 0) {
+    doc.text("No commands with count > 5.", procsX, procsY);
+    procsY += 5;
+  } else {
+    topProcesses.forEach(([cmd, count]) => {
+      const text = `${cmd} (${count})`;
+      const wrapped = doc.splitTextToSize(text, 75);
+      wrapped.forEach(line => {
+        doc.text(line, procsX, procsY);
+        procsY += 4.5;
+      });
+    });
+  }
+
+  // ---------- Top Source IPs (RIGHT, below Top Processes) ----------
+  procsY += 4;
+  doc.setFontSize(11);
+  doc.setTextColor(20, 20, 20);
+  doc.text("Top Source IPs", procsX, procsY);
+  procsY += 6;
+
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
+  if (!topIPs || topIPs.length === 0) {
+    doc.text("No IPs with count > 5.", procsX, procsY);
+  } else {
+    topIPs.forEach(([ip, count]) => {
+      doc.text(`${ip} (${count})`, procsX, procsY);
+      procsY += 4.5;
+    });
+  }
+}
+
+function buildDetailsPages(doc, alerts, nodeAnchors) {
+  // Group alerts by node (__server field)
+  const byNode = {};
+  alerts.forEach(a => {
+    const node = a.__server || "unknown-node";
+    if (!byNode[node]) byNode[node] = [];
+    byNode[node].push(a);
+  });
+
+  const nodeKeys = Object.keys(byNode).sort();
+
+  function sortNodeAlerts(list) {
+    return list.slice().sort((a, b) => {
+      const ra = normalizeRiskLevel(a) || 99;
+      const rb = normalizeRiskLevel(b) || 99;
+      if (ra !== rb) return ra - rb;
+      const ta = (a.time || a.timestamp || "").toString();
+      const tb = (b.time || b.timestamp || "").toString();
+      return ta.localeCompare(tb);
+    });
+  }
+
+  // Column positions
+  const colTimeX = 10;
+  const colRiskX = 48;
+  const colIPX   = 62;
+  const colPIDX  = 92;
+  const colMsgX  = 110;
+  const rowHeightMin = 6;
+
+  // Helper to draw node header + table header on a page
+  function drawNodeHeaderAndTable(node, counts, totalAlerts, y) {
+    // Node header with yellow highlight:
+    // Node: <node> | High: X | Medium: Y | Low: Z | Total: N
+    doc.setFontSize(11);
+    doc.setFont(undefined, "bold");
+    doc.setTextColor(20, 20, 20);
+
+    doc.setFillColor(255, 255, 204);
+    doc.rect(8, y - 4, 190 - 16, 7, "F");
+
+    const headerText = `Node: ${node} | Total: ${totalAlerts}`;
+
+    doc.text(headerText, 10, y);
+
+    // Record anchor only the first time we see this node
+    if (!nodeAnchors[node]) {
+      const info = doc.getCurrentPageInfo
+        ? doc.getCurrentPageInfo()
+        : { pageNumber: doc.internal.getNumberOfPages() };
+      nodeAnchors[node] = {
+        page: info.pageNumber,
+        y: y
+      };
+    }
+
+    y += 6;
+
+    // Table header
+    const headerY = y;
+    doc.setFillColor(230, 230, 230);
+    doc.setDrawColor(200, 200, 200);
+    doc.rect(10, headerY - 4, 190 - 10, 6, "F");
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, "bold");
+    doc.setTextColor(20, 20, 20);
+    doc.text("Time", colTimeX, headerY);
+    doc.text("Risk", colRiskX, headerY);
+    doc.text("IP",   colIPX,   headerY);
+    doc.text("PID",  colPIDX,  headerY);
+    doc.text("Message / Tags", colMsgX, headerY);
+
+    y = headerY + 6;
+    doc.setFont(undefined, "normal");
+    doc.setTextColor(40, 40, 40);
+    return y;
+  }
+
+  // Start on a NEW page after current (so page 1 is for summary)
+  doc.addPage();
+  doc.setFontSize(14);
+  doc.setTextColor(20, 20, 20);
+  doc.setFont(undefined, "bold");
+  doc.text("Alert Details by Node", 10, 20);
+  
+  // Add "Go back to Summary" link on first details page
+  doc.setFontSize(10);
+  doc.setFont(undefined, "normal");
+  doc.setTextColor(0, 0, 255);
+  doc.textWithLink("Go back to Summary", 150, 20, {
+    pageNumber: 1,
+    y: 20
+  });
+
+  let y = 28;
+
+  nodeKeys.forEach(node => {
+    const nodeAlerts = sortNodeAlerts(byNode[node]);
+    if (!nodeAlerts.length) return;
+
+    // Pre-compute risk counts for this node
+    const counts = { 1: 0, 2: 0, 3: 0 };
+    nodeAlerts.forEach(a => {
+      const r = normalizeRiskLevel(a);
+      if (r === 1 || r === 2 || r === 3) counts[r]++;
+    });
+    const totalForNode = nodeAlerts.length;
+
+    // New page if we don't have room for node header + table header
+    if (y > 260) {
+      doc.addPage();
+      doc.setFontSize(14);
+      doc.setTextColor(20, 20, 20);
+      doc.setFont(undefined, "bold");
+      doc.text("Alert Details by Node (cont.)", 10, 20);
+      
+      // Add "Go back to Summary" link on continuation pages
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.setTextColor(0, 0, 255);
+      doc.textWithLink("Go back to Summary", 150, 20, {
+        pageNumber: 1,
+        y: 20
+      });
+      
+      y = 28;
+    }
+
+    // Draw node header + table header
+    y = drawNodeHeaderAndTable(node, counts, totalForNode, y);
+
+    // ---------- Rows ----------
+    nodeAlerts.forEach(a => {
+      const ts   = a.time || a.timestamp || "unknown-time";
+      const riskN = normalizeRiskLevel(a) || "?";
+      const ip   = a.ip || a.IP || "-";
+      const pid  = (a.pid != null && a.pid !== undefined) ? String(a.pid) : "-";
+      const msgBase = a.message || a.msg || a.description || a.cmd || a.comm || "Unknown event";
+      const tagsArr = Array.isArray(a.tags) ? a.tags : [];
+      const tagsStr = tagsArr.length ? ` [tags: ${tagsArr.join(", ")}]` : "";
+      const fullMsg = msgBase + tagsStr;
+
+      const wrappedMsg = doc.splitTextToSize(fullMsg, 80);
+      const msgLines   = wrappedMsg.length || 1;
+      const rowHeight  = Math.max(rowHeightMin, msgLines * 4.2);
+
+      if (y + rowHeight > 285) {
+        // New page for continuation of this node
+        doc.addPage();
+        doc.setFontSize(14);
+        doc.setTextColor(20, 20, 20);
+        doc.setFont(undefined, "bold");
+        doc.text("Alert Details by Node (cont.)", 10, 20);
+        
+        // Add "Go back to Summary" link on continuation pages
+        doc.setFontSize(10);
+        doc.setFont(undefined, "normal");
+        doc.setTextColor(0, 0, 255);
+        doc.textWithLink("Go back to Summary", 150, 20, {
+          pageNumber: 1,
+          y: 20
+        });
+        
+        y = 28;
+
+        // Draw node header + table header again, so any random page shows node & risk
+        y = drawNodeHeaderAndTable(node, counts, totalForNode, y);
+      }
+
+      // Color the entire row based on risk (bold colors)
+      const [rr, gg, bb] = getRiskRGB(riskN);
+      doc.setTextColor(rr, gg, bb);
+      doc.setFont(undefined, "normal");
+
+      // Basic columns
+      doc.text(String(ts), colTimeX, y);
+      doc.text(String(riskN), colRiskX, y);
+      doc.text(String(ip), colIPX, y);
+      doc.text(String(pid), colPIDX, y);
+
+      let msgY = y;
+      wrappedMsg.forEach(line => {
+        doc.text(line, colMsgX, msgY);
+        msgY += 4.2;
+      });
+
+      y += rowHeight + 1.5;
+    });
+
+    y += 3; // space between nodes
+  });
+}
+
+// IMPROVED: Better error handling and debugging for fetching alerts
+async function fetchAlertsFromServer(ip, timeoutMs = 25000, force = false) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(`ws://${ip}:8765`);
+    let resolved = false;
+    let responseReceived = false;
+    let responseData = null;
+
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        ws.close();
+        console.warn(`⏰ Timeout (${timeoutMs}ms) fetching alerts from ${ip}`);
+        resolve([]); // Return empty array instead of rejecting
+      }
+    }, timeoutMs);
+
+    ws.onopen = () => {
+      console.log(`🔗 WebSocket opened to ${ip}${force ? ' (forced refresh)' : ''}`);
+      console.log(`📤 Sending get_alerts request to ${ip}`);
+      try {
+        ws.send(JSON.stringify({ type: "get_alerts" }));
+      } catch (err) {
+        console.error(`❌ Error sending request to ${ip}:`, err);
+        if (!resolved) {
+          clearTimeout(timeout);
+          resolved = true;
+          resolve([]);
+        }
+      }
+    };
+
+    ws.onmessage = (event) => {
+      responseReceived = true;
+      responseData = event.data;
+      console.log(`📥 Raw response from ${ip}:`, event.data);
+
+      try {
+        const data = JSON.parse(event.data);
+        console.log(`📋 Parsed response from ${ip}:`, data);
+
+        if (data.type === "alert_list" && Array.isArray(data.alerts)) {
+          console.log(`✅ Got ${data.alerts.length} alerts from ${ip}`);
+          clearTimeout(timeout);
+          resolved = true;
+          resolve(data.alerts);
+        } else if (data.type === "alert_list" && !Array.isArray(data.alerts)) {
+          console.warn(`⚠️ No alerts array from ${ip}:`, data);
+          clearTimeout(timeout);
+          resolved = true;
+          resolve([]);
+        } else {
+          console.warn(`⚠️ Unexpected response type from ${ip}:`, data.type);
+          console.warn(`📋 Full response:`, data);
+          clearTimeout(timeout);
+          resolved = true;
+          resolve([]);
+        }
+      } catch (err) {
+        console.error(`❌ JSON parse error from ${ip}:`, err);
+        console.error(`📥 Raw data that failed to parse:`, event.data);
+        clearTimeout(timeout);
+        resolved = true;
+        resolve([]);
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.error(`❌ WebSocket error from ${ip}:`, err);
+      console.error(`   Error details:`, err);
+      if (!resolved) {
+        clearTimeout(timeout);
+        resolved = true;
+        resolve([]);
+      }
+    };
+
+    ws.onclose = (event) => {
+      console.log(`🔌 WebSocket closed for ${ip}. Code: ${event.code}, Reason: ${event.reason}, Clean: ${event.wasClean}`);
+
+      // If we received a response but haven't resolved yet, try to process it
+      if (!resolved && responseReceived && responseData) {
+        console.log(`🔄 Processing response after connection close for ${ip}`);
+        try {
+          const data = JSON.parse(responseData);
+          console.log(`📋 Processing delayed response from ${ip}:`, data);
+
+          if (data.type === "alert_list" && Array.isArray(data.alerts)) {
+            console.log(`✅ Got ${data.alerts.length} alerts from ${ip} (delayed processing)`);
+            clearTimeout(timeout);
+            resolved = true;
+            resolve(data.alerts);
+            return;
+          }
+        } catch (err) {
+          console.error(`❌ Failed to process delayed response from ${ip}:`, err);
+        }
+      }
+
+      if (!resolved) {
+        if (!responseReceived) {
+          console.warn(`⚠️ WebSocket closed for ${ip} before any response received`);
+        } else {
+          console.warn(`⚠️ WebSocket closed for ${ip} after response but before resolution`);
+        }
+        clearTimeout(timeout);
+        resolved = true;
+        resolve([]);
+      }
+    };
+  });
+}
+
+function getRiskColor(level) {
+  const risk = String(level || "").toLowerCase();
+  switch (risk) {
+    case "critical":
+    case "high":
+    case "1": return [200, 0, 0];       // 🔴 Red
+    case "medium":
+    case "2": return [255, 140, 0];     // 🟠 Orange
+    case "low":
+    case "3": return [0, 128, 0];       // 🟢 Green
+    default: return [120, 120, 120];    // ⚫ Gray
+  }
+}
+
+function getRiskBullet(level) {
+  const risk = String(level || "").toLowerCase();
+  switch (risk) {
+    case "critical":
+    case "high":
+    case "1": return "🔴";
+    case "medium":
+    case "2": return "🟠";
+    case "low":
+    case "3": return "🟢";
+    default: return "⚫";
+  }
+}
+
+async function generateCombinedAlerts() {
+  const rows = document.querySelectorAll(".select-server");
+  const combinedAlerts = [];
+
+  await Promise.all(Array.from(rows).map(async row => {
+    const ip = row.dataset.ip;
+    try {
+      const alerts = await fetchAlertsFromServer(ip, 3000);
+      alerts.forEach(a => combinedAlerts.push({ server: ip, ...a }));
+    } catch (err) {
+      console.warn(`Skipping unreachable server: ${ip}`);
+    }
+  }));
+
+  const blob = new Blob([JSON.stringify(combinedAlerts, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const download = document.createElement("a");
+  download.href = url;
+  download.download = "combined_alerts.json";
+  download.style.display = "none";
+  document.body.appendChild(download);
+  download.click();
+  document.body.removeChild(download);
+  URL.revokeObjectURL(url);
+}
+
+function clearAllCriticalAlerts() {
+  const rows = document.querySelectorAll(".select-server");
+  let clearedCount = 0;
+  let totalAttempts = 0;
+  let completedAttempts = 0;
+
+  rows.forEach(row => {
+    const ip = row.dataset.ip;
+    const alertCell = document.getElementById(`alert-${ip}`);
+    const isCritical = alertCell?.textContent.includes("Critical");
+
+    if (isCritical) {
+      totalAttempts++;
+      console.log(`🔄 Attempting to clear alerts from ${ip}...`);
+
+      const ws = new WebSocket(`ws://${ip}:8765`);
+      let responseReceived = false;
+      let timeoutId = null;
+
+      // Set a timeout for the entire operation
+      timeoutId = setTimeout(() => {
+        console.warn(`⏰ Timeout waiting for response from ${ip}`);
+        if (!responseReceived) {
+          ws.close();
+        }
+      }, 10000); // 10 second timeout
+
+      ws.onopen = () => {
+        console.log(`✅ Connected to ${ip}, sending clear_alerts request`);
+        ws.send(JSON.stringify({ type: "clear_alerts" }));
+      };
+
+      ws.onmessage = (event) => {
+        console.log(`📥 Raw response from ${ip}:`, event.data);
+        responseReceived = true;
+
+        // Clear the timeout since we got a response
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+
+        try {
+          const data = JSON.parse(event.data);
+          console.log(`📋 Parsed response from ${ip}:`, data);
+
+          if (data.type === "clear_alerts_ack") {
+            clearedCount++;
+            console.log(`✅ Alerts cleared from ${ip}`);
+            // Update the alert status in the UI
+            document.getElementById(`alert-${ip}`).innerHTML = `<span class="none">None</span>`;
+          } else {
+            console.warn(`⚠️ Unexpected response type from ${ip}:`, data.type);
+          }
+        } catch (err) {
+          console.error(`❌ Failed to parse response from ${ip}:`, err);
+          console.error(`📥 Raw data that failed to parse:`, event.data);
+        }
+
+        // Add a small delay before closing to ensure response is processed
+        setTimeout(() => {
+          ws.close();
+        }, 100);
+      };
+
+      ws.onerror = (err) => {
+        console.error(`❌ WebSocket error for ${ip}:`, err);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        completedAttempts++;
+        checkCompletion();
+      };
+
+      ws.onclose = (event) => {
+        console.log(`🔌 WebSocket closed for ${ip}. Code: ${event.code}, Reason: ${event.reason}, Clean: ${event.wasClean}`);
+
+        // Clear timeout if it's still active
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+
+        if (!responseReceived) {
+          console.warn(`⚠️ No response received from ${ip} before connection closed`);
+        }
+
+        completedAttempts++;
+        checkCompletion();
+      };
+    }
+  });
+
+  function checkCompletion() {
+    console.log(`📊 Progress: ${completedAttempts}/${totalAttempts} attempts completed, ${clearedCount} successful`);
+
+    if (completedAttempts >= totalAttempts) {
+      console.log(`📊 Clear alerts operation completed:`);
+      console.log(`   - Total attempts: ${totalAttempts}`);
+      console.log(`   - Successfully cleared: ${clearedCount}`);
+      console.log(`   - Failed: ${totalAttempts - clearedCount}`);
+
+      // Only show error if no servers were cleared AND we had attempts
+      if (clearedCount === 0 && totalAttempts > 0) {
+        alert("❌ Failed to clear alerts from any servers. Check console for details.");
+      } else if (clearedCount > 0) {
+        alert(`🧹 Successfully cleared alerts from ${clearedCount} server(s).`);
+      }
+    }
+  }
+
+  if (totalAttempts === 0) {
+    alert("ℹ️ No servers with critical alerts found.");
+  } else {
+    console.log(`🔄 Starting clear alerts operation for ${totalAttempts} server(s)...`);
+  }
+}
+
+// View Rules functionality
+function fetchRulesFromServer(ip, timeoutMs = 3000) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(`ws://${ip}:8765`);
+    let resolved = false;
+
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        ws.close();
+        reject(new Error(`Timeout fetching rules from ${ip}`));
+      }
+    }, timeoutMs);
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "get_rules" }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "rule_list" && Array.isArray(data.rules)) {
+          clearTimeout(timeout);
+          resolved = true;
+          resolve(data.rules);
+        } else {
+          clearTimeout(timeout);
+          resolved = true;
+          resolve([]);
+        }
+      } catch {
+        clearTimeout(timeout);
+        resolved = true;
+        resolve([]);
+      } finally {
+        ws.close();
+      }
+    };
+
+    ws.onerror = () => {
+      if (!resolved) {
+        clearTimeout(timeout);
+        resolved = true;
+        reject(new Error(`WebSocket error from ${ip}`));
+      }
+    };
+  });
+}
+
+function displayRules(rules) {
+  const container = document.getElementById('rules-container');
+
+  if (!rules || rules.length === 0) {
+    container.innerHTML = '<div class="no-rules">No rules found</div>';
+    return;
+  }
+
+  const rulesHtml = rules.map(rule => {
+    let ruleType = 'Unknown';
+    let details = '';
+
+    if (rule.type === 'add_rule') {
+      ruleType = 'EDR Rule';
+      details = `
+        <div>Match Key: ${rule.match_key || 'N/A'}</div>
+        <div>Match Values: ${Array.isArray(rule.match_values) ? rule.match_values.join(', ') : rule.match_values || 'N/A'}</div>
+        <div>Tags: ${Array.isArray(rule.tags) ? rule.tags.join(', ') : rule.tags || 'N/A'}</div>
+        <div>Risk Level: ${rule.risk_level || 'N/A'}</div>
+      `;
+    } else if (rule.type === 'add_xdr_rule') {
+      ruleType = 'XDR Rule';
+      details = `
+        <div>Action: ${rule.rule_type || 'N/A'}</div>
+        <div>IP: ${rule.value?.ip || 'Any'}</div>
+        <div>Port: ${rule.value?.port || 'Any'}</div>
+      `;
+    } else {
+      details = `<div>${JSON.stringify(rule, null, 2)}</div>`;
+    }
+
+    return `
+      <div class="rule-item">
+        <div class="rule-type">${ruleType}</div>
+        <div class="rule-details">${details}</div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = rulesHtml;
+}
+
+function refreshRules() {
+  const selectedServers = Array.from(document.querySelectorAll(".select-server:checked"));
+
+  if (selectedServers.length === 0) {
+    alert("Please select at least one server to view rules from.");
+    return;
+  }
+
+  const container = document.getElementById('rules-container');
+  container.innerHTML = '<div class="loading-rules">Loading rules...</div>';
+
+  // Try to fetch rules from the first selected server
+  const firstServer = selectedServers[0];
+  const ip = firstServer.dataset.ip;
+
+  fetchRulesFromServer(ip, 5000)
+    .then(rules => {
+      displayRules(rules);
+      console.log(`✅ Fetched ${rules.length} rules from ${ip}`);
+    })
+    .catch(err => {
+      console.error(`❌ Failed to fetch rules from ${ip}:`, err);
+      container.innerHTML = `<div class="no-rules">Failed to load rules: ${err.message}</div>`;
+    });
+}
+
+function viewAllRules() {
+  const allServers = Array.from(document.querySelectorAll(".select-server"));
+  const onlineServers = allServers.filter(server => {
+    const ip = server.dataset.ip;
+    const statusCell = document.getElementById(`status-${ip}`);
+    return statusCell && statusCell.textContent.includes("Online");
+  });
+
+  if (onlineServers.length === 0) {
+    alert("No online servers found. Please wait for servers to come online.");
+    return;
+  }
+
+  const popup = document.getElementById('rules-popup');
+  const content = document.getElementById('rules-content');
+  content.innerHTML = '<div class="loading-rules">Loading rules from all online servers...</div>';
+  popup.style.display = 'block';
+
+  // Fetch rules from all online servers
+  const rulePromises = onlineServers.map(server => {
+    const ip = server.dataset.ip;
+    return fetchRulesFromServer(ip, 5000)
+      .then(rules => ({ ip, rules, success: true }))
+      .catch(err => ({ ip, rules: [], success: false, error: err.message }));
+  });
+
+  Promise.all(rulePromises)
+    .then(results => {
+      const allRules = [];
+      const failedServers = [];
+
+      results.forEach(result => {
+        if (result.success && result.rules.length > 0) {
+          result.rules.forEach(rule => {
+            allRules.push({
+              ...rule,
+              server_ip: result.ip
+            });
+          });
+        } else if (!result.success) {
+          failedServers.push(result.ip);
+        }
+      });
+
+      if (allRules.length === 0) {
+        content.innerHTML = '<div class="no-rules">No rules found on any online servers</div>';
+        if (failedServers.length > 0) {
+          console.warn(`Failed to fetch rules from: ${failedServers.join(', ')}`);
+        }
+        return;
+      }
+
+      // Display all rules grouped by server
+      const rulesByServer = {};
+      allRules.forEach(rule => {
+        if (!rulesByServer[rule.server_ip]) {
+          rulesByServer[rule.server_ip] = [];
+        }
+        rulesByServer[rule.server_ip].push(rule);
+      });
+
+      let rulesHtml = '';
+      Object.keys(rulesByServer).forEach(ip => {
+        const serverRules = rulesByServer[ip];
+        rulesHtml += `<div class="rule-item" style="border-left: 4px solid var(--primary); margin-bottom: 1rem;">`;
+        rulesHtml += `<div class="rule-type">Server: ${ip} (${serverRules.length} rules)</div>`;
+
+        serverRules.forEach(rule => {
+          let ruleType = 'Unknown';
+          let details = '';
+
+          if (rule.type === 'add_rule') {
+            ruleType = 'EDR Rule';
+            details = `
+              <div>Match Key: ${rule.match_key || 'N/A'}</div>
+              <div>Match Values: ${Array.isArray(rule.match_values) ? rule.match_values.join(', ') : rule.match_values || 'N/A'}</div>
+              <div>Tags: ${Array.isArray(rule.tags) ? rule.tags.join(', ') : rule.tags || 'N/A'}</div>
+              <div>Risk Level: ${rule.risk_level || 'N/A'}</div>
+            `;
+          } else if (rule.match_key && rule.match_values) {
+            // EDR rules without type field but with match_key and match_values
+            ruleType = 'EDR Rule';
+            details = `
+              <div>Match Key: ${rule.match_key || 'N/A'}</div>
+              <div>Match Values: ${Array.isArray(rule.match_values) ? rule.match_values.join(', ') : rule.match_values || 'N/A'}</div>
+              <div>Tags: ${Array.isArray(rule.tags) ? rule.tags.join(', ') : rule.tags || 'N/A'}</div>
+              <div>Risk Level: ${rule.risk_level || 'N/A'}</div>
+            `;
+          } else if (rule.type === 'add_xdr_rule') {
+            ruleType = 'XDR Rule';
+            details = `
+              <div>Action: ${rule.rule_type || 'N/A'}</div>
+              <div>IP: ${rule.value?.ip || 'Any'}</div>
+              <div>Port: ${rule.value?.port || 'Any'}</div>
+            `;
+          } else {
+            details = `<div>${JSON.stringify(rule, null, 2)}</div>`;
+          }
+
+          rulesHtml += `
+            <div class="rule-item" style="margin-left: 1rem; margin-top: 0.5rem;">
+              <div class="rule-type">${ruleType}</div>
+              <div class="rule-details">${details}</div>
+            </div>
+          `;
+        });
+
+        rulesHtml += `</div>`;
+      });
+
+      content.innerHTML = rulesHtml;
+      console.log(`✅ Fetched ${allRules.length} total rules from ${Object.keys(rulesByServer).length} servers`);
+
+      if (failedServers.length > 0) {
+        console.warn(`❌ Failed to fetch rules from: ${failedServers.join(', ')}`);
+      }
+    })
+    .catch(err => {
+      console.error(`❌ Failed to fetch rules:`, err);
+      content.innerHTML = `<div class="no-rules">Failed to load rules: ${err.message}</div>`;
+    });
+}
+
+function deleteAllRules() {
+  const allServers = Array.from(document.querySelectorAll(".select-server"));
+  const onlineServers = allServers.filter(server => {
+    const ip = server.dataset.ip;
+    const statusCell = document.getElementById(`status-${ip}`);
+    return statusCell && statusCell.textContent.includes("Online");
+  });
+
+  if (onlineServers.length === 0) {
+    alert("No online servers found. Please wait for servers to come online.");
+    return;
+  }
+
+  const confirmed = confirm("Are you sure you want to delete ALL rules from all online servers? This action cannot be undone.");
+  if (!confirmed) return;
+
+  const deletePromises = onlineServers.map(server => {
+    const ip = server.dataset.ip;
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket(`ws://${ip}:8765`);
+      let responseReceived = false;
+      let timeoutId = null;
+
+      timeoutId = setTimeout(() => {
+        ws.close();
+        reject(new Error(`Timeout deleting rules from ${ip}`));
+      }, 10000); // 10 second timeout
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: "clear_rules" }));
+      };
+
+      ws.onmessage = (event) => {
+        responseReceived = true;
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "rule_list") {
+            clearTimeout(timeoutId);
+            resolve({ ip, success: true });
+          } else {
+            clearTimeout(timeoutId);
+            reject(new Error(`Unexpected response type from ${ip}: ${data.type}`));
+          }
+        } catch (err) {
+          clearTimeout(timeoutId);
+          reject(err);
+        }
+      };
+
+      ws.onerror = (err) => {
+        clearTimeout(timeoutId);
+        reject(err);
+      };
+
+      ws.onclose = (event) => {
+        if (!responseReceived) {
+          clearTimeout(timeoutId);
+          reject(new Error(`WebSocket closed for ${ip} before response`));
+        }
+      };
+    });
+  });
+
+  Promise.all(deletePromises)
+    .then(results => {
+      const successfulDeletes = results.filter(r => r.success).length;
+      const failedDeletes = results.filter(r => !r.success).length;
+
+      if (successfulDeletes === 0) {
+        alert("❌ Failed to delete rules from any online servers.");
+      } else {
+        alert(`🧹 Successfully deleted rules from ${successfulDeletes} server(s).`);
+      }
+      if (failedDeletes > 0) {
+        console.warn(`❌ Failed to delete rules from: ${results.filter(r => !r.success).map(r => r.ip).join(', ')}`);
+      }
+    })
+    .catch(err => {
+      console.error(`❌ Failed to delete rules:`, err);
+      alert(`❌ Failed to delete rules: ${err.message}`);
+    });
+}
+
+function viewAllXDRRules() {
+  const allServers = Array.from(document.querySelectorAll(".select-server"));
+  const onlineServers = allServers.filter(server => {
+    const ip = server.dataset.ip;
+    const statusCell = document.getElementById(`status-${ip}`);
+    return statusCell && statusCell.textContent.includes("Online");
+  });
+
+  if (onlineServers.length === 0) {
+    alert("No online servers found. Please wait for servers to come online.");
+    return;
+  }
+
+  const popup = document.getElementById('rules-popup');
+  const content = document.getElementById('rules-content');
+  content.innerHTML = '<div class="loading-rules">Loading network rules from all online servers...</div>';
+  popup.style.display = 'block';
+
+  // Fetch network rules from all online servers using get_xdr_rules
+  const rulePromises = onlineServers.map(server => {
+    const ip = server.dataset.ip;
+    return fetchXDRRulesFromServer(ip, 5000)
+      .then(rules => ({ ip, rules, success: true }))
+      .catch(err => ({ ip, rules: [], success: false, error: err.message }));
+  });
+
+  Promise.all(rulePromises)
+    .then(results => {
+      const allRules = [];
+      const failedServers = [];
+
+      results.forEach(result => {
+        if (result.success && result.rules.length > 0) {
+          result.rules.forEach(rule => {
+            allRules.push({
+              ...rule,
+              server_ip: result.ip
+            });
+          });
+        } else if (!result.success) {
+          failedServers.push(result.ip);
+        }
+      });
+
+      if (allRules.length === 0) {
+        content.innerHTML = '<div class="no-rules">No network rules found on any online servers</div>';
+        if (failedServers.length > 0) {
+          console.warn(`Failed to fetch network rules from: ${failedServers.join(', ')}`);
+        }
+        return;
+      }
+
+      // Display all network rules grouped by server
+      const rulesByServer = {};
+      allRules.forEach(rule => {
+        if (!rulesByServer[rule.server_ip]) {
+          rulesByServer[rule.server_ip] = [];
+        }
+        rulesByServer[rule.server_ip].push(rule);
+      });
+
+      let rulesHtml = '';
+      Object.keys(rulesByServer).forEach(ip => {
+        const serverRules = rulesByServer[ip];
+        rulesHtml += `<div class="rule-item" style="border-left: 4px solid var(--primary); margin-bottom: 1rem;">`;
+        rulesHtml += `<div class="rule-type">Server: ${ip} (${serverRules.length} network rules)</div>`;
+
+        serverRules.forEach(rule => {
+          let ruleType = 'Unknown';
+          let details = '';
+
+          if (rule.type === 'add_xdr_rule') {
+            ruleType = 'XDR Rule';
+            details = `
+              <div>Action: ${rule.rule_type || 'N/A'}</div>
+              <div>IP: ${rule.value?.ip || 'Any'}</div>
+              <div>Port: ${rule.value?.port || 'Any'}</div>
+            `;
+          } else if (rule.type === 'block') {
+            ruleType = 'XDR Block Rule';
+            details = `
+              <div>Action: Block</div>
+              <div>IP: ${rule.value?.ip || 'Any'}</div>
+              <div>Port: ${rule.value?.port || 'Any'}</div>
+            `;
+          } else if (rule.type === 'allow') {
+            ruleType = 'XDR Allow Rule';
+            details = `
+              <div>Action: Allow</div>
+              <div>IP: ${rule.value?.ip || 'Any'}</div>
+              <div>Port: ${rule.value?.port || 'Any'}</div>
+            `;
+          } else {
+            ruleType = 'XDR Rule';
+            details = `
+              <div>Type: ${rule.type || 'Unknown'}</div>
+              <div>IP: ${rule.value?.ip || 'Any'}</div>
+              <div>Port: ${rule.value?.port || 'Any'}</div>
+            `;
+          }
+
+          rulesHtml += `
+            <div class="rule-item" style="margin-left: 1rem; margin-top: 0.5rem;">
+              <div class="rule-type">${ruleType}</div>
+              <div class="rule-details">${details}</div>
+            </div>
+          `;
+        });
+
+        rulesHtml += `</div>`;
+      });
+
+      content.innerHTML = rulesHtml;
+      console.log(`✅ Fetched ${allRules.length} total network rules from ${Object.keys(rulesByServer).length} servers`);
+
+      if (failedServers.length > 0) {
+        console.warn(`❌ Failed to fetch network rules from: ${failedServers.join(', ')}`);
+      }
+    })
+    .catch(err => {
+      console.error(`❌ Failed to fetch network rules:`, err);
+      content.innerHTML = `<div class="no-rules">Failed to load network rules: ${err.message}</div>`;
+    });
+}
+
+// New function to fetch XDR rules from server
+function fetchXDRRulesFromServer(ip, timeoutMs = 3000) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(`ws://${ip}:8765`);
+    let resolved = false;
+
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        ws.close();
+        reject(new Error(`Timeout fetching XDR rules from ${ip}`));
+      }
+    }, timeoutMs);
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "get_xdr_rules" }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "xdr_rule_list" && Array.isArray(data.rules)) {
+          clearTimeout(timeout);
+          resolved = true;
+          resolve(data.rules);
+        } else {
+          clearTimeout(timeout);
+          resolved = true;
+          resolve([]);
+        }
+      } catch {
+        clearTimeout(timeout);
+        resolved = true;
+        resolve([]);
+      } finally {
+        ws.close();
+      }
+    };
+
+    ws.onerror = () => {
+      if (!resolved) {
+        clearTimeout(timeout);
+        resolved = true;
+        reject(new Error(`WebSocket error from ${ip}`));
+      }
+    };
+  });
+}
+
+function deleteAllXDRRules() {
+  const allServers = Array.from(document.querySelectorAll(".select-server"));
+  const onlineServers = allServers.filter(server => {
+    const ip = server.dataset.ip;
+    const statusCell = document.getElementById(`status-${ip}`);
+    return statusCell && statusCell.textContent.includes("Online");
+  });
+
+  if (onlineServers.length === 0) {
+    alert("No online servers found. Please wait for servers to come online.");
+    return;
+  }
+
+  const confirmed = confirm("Are you sure you want to delete ALL network rules from all online servers? This action cannot be undone.");
+  if (!confirmed) return;
+
+  const totalAttempts = onlineServers.length;
+  const deletePromises = onlineServers.map(server => {
+    const ip = server.dataset.ip;
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket(`ws://${ip}:8765`);
+      let responseReceived = false;
+      let timeoutId = null;
+
+      timeoutId = setTimeout(() => {
+        ws.close();
+        reject(new Error(`Timeout deleting network rules from ${ip}`));
+      }, 15000); // Increased to 15 second timeout
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: "clear_xdr_rules" }));
+      };
+
+      ws.onmessage = (event) => {
+        responseReceived = true;
+        console.log(`📥 Raw response from ${ip}:`, event.data);
+        try {
+          const data = JSON.parse(event.data);
+          console.log(`📋 Parsed response from ${ip}:`, data);
+          console.log(`📋 Response type:`, data.type);
+          console.log(`📋 Has type field:`, 'type' in data);
+
+          // Filter out alert/event messages that don't have a type field
+          if (!('type' in data)) {
+            console.log(`📋 Ignoring alert/event message from ${ip}, waiting for actual response...`);
+            return; // Don't resolve/reject, keep waiting for the actual response
+          }
+
+          if (data.type === "xdr_rule_list") {
+            clearTimeout(timeoutId);
+            console.log(`✅ Successfully received xdr_rule_list from ${ip}`);
+            resolve({ ip, success: true });
+          } else if (data.type) {
+            clearTimeout(timeoutId);
+            console.warn(`⚠️ Unexpected response type from ${ip}:`, data.type);
+            reject(new Error(`Unexpected response type from ${ip}: ${data.type}`));
+          } else {
+            clearTimeout(timeoutId);
+            console.warn(`⚠️ Response has no type field from ${ip}:`, data);
+            reject(new Error(`Response has no type field from ${ip}`));
+          }
+        } catch (err) {
+          clearTimeout(timeoutId);
+          console.error(`❌ Parse error from ${ip}:`, err);
+          reject(err);
+        }
+
+        // Add a small delay before closing to ensure response is processed
+        setTimeout(() => {
+          ws.close();
+        }, 100);
+      };
+
+      ws.onerror = (err) => {
+        clearTimeout(timeoutId);
+        reject(err);
+      };
+
+      ws.onclose = (event) => {
+        if (!responseReceived) {
+          clearTimeout(timeoutId);
+          reject(new Error(`WebSocket closed for ${ip} before response`));
+        }
+      };
+    });
+  });
+
+  Promise.all(deletePromises)
+    .then(results => {
+      const successfulDeletes = results.filter(r => r.success).length;
+      const failedDeletes = results.filter(r => !r.success).length;
+
+      if (successfulDeletes === 0 && totalAttempts > 1) {
+        alert("❌ Failed to delete network rules from any online servers.");
+      } else if (successfulDeletes > 0) {
+        alert(`🧹 Successfully deleted network rules from ${successfulDeletes} server(s).`);
+      }
+      if (failedDeletes > 0) {
+        console.warn(`❌ Failed to delete network rules from: ${results.filter(r => !r.success).map(r => r.ip).join(', ')}`);
+      }
+    })
+    .catch(err => {
+      console.error(`❌ Failed to delete network rules:`, err);
+      alert(`❌ Failed to delete network rules: ${err.message}`);
+    });
+}
+
+// Auto-refresh rules when servers are selected/deselected
+function setupRulesRefresh() {
+  document.addEventListener('change', (event) => {
+    if (event.target.classList.contains('select-server')) {
+      const selectedServers = document.querySelectorAll(".select-server:checked");
+      if (selectedServers.length > 0) {
+        // Debounce the refresh to avoid too many requests
+        clearTimeout(window.rulesRefreshTimeout);
+        window.rulesRefreshTimeout = setTimeout(refreshRules, 500);
+      }
+    }
+  });
+}
+
+// Initialize rules refresh functionality
+document.addEventListener('DOMContentLoaded', function() {
+  setupRulesRefresh();
+});
+
+function showAlertsPopup(ip) {
+  const ws = new WebSocket(`ws://${ip}:8765`);
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: "get_alerts" }));
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "alert_list" && Array.isArray(data.alerts)) {
+        const popup = document.getElementById('rules-popup');
+        const content = document.getElementById('rules-content');
+
+        if (data.alerts.length === 0) {
+          content.innerHTML = `<div class="no-rules">No alerts found for server ${ip}</div>`;
+        } else {
+          let alertsHtml = `<div class="rule-item" style="border-left: 4px solid #f39c12; margin-bottom: 1rem;">`;
+          alertsHtml += `<div class="rule-type">Server: ${ip} (${data.alerts.length} alerts)</div>`;
+
+          data.alerts.forEach(alert => {
+            const timestamp = alert.time || alert.timestamp || 'Unknown time';
+            const message = alert.message || alert.msg || 'Unknown event';
+            const risk = alert.risk_level || alert.severity || 'unknown';
+            const riskBullet = getRiskBullet(risk);
+
+            alertsHtml += `
+              <div class="rule-item" style="margin-left: 1rem; margin-top: 0.5rem; border-left: 2px solid ${risk === 'critical' || risk === 'high' || risk === 1 ? '#e74c3c' : risk === 'medium' || risk === 2 ? '#f39c12' : '#27ae60'};">
+                <div class="rule-type">${riskBullet} ${timestamp}</div>
+                <div class="rule-details">${message}</div>
+              </div>
+            `;
+          });
+
+          alertsHtml += `</div>`;
+          content.innerHTML = alertsHtml;
+        }
+
+        popup.style.display = 'block';
+        // Change the popup title to reflect that we're showing alerts
+        const title = popup.querySelector('h3');
+        title.textContent = '🚨 Server Alerts';
+      }
+    } catch (err) {
+      console.error("WebSocket alert fetch error:", err);
+      const popup = document.getElementById('rules-popup');
+      const content = document.getElementById('rules-content');
+      content.innerHTML = `<div class="no-rules">Failed to load alerts: ${err.message}</div>`;
+      popup.style.display = 'block';
+    } finally {
+      ws.close();
+    }
+  };
+
+  ws.onerror = (err) => {
+    console.error(`❌ WebSocket error fetching alerts from ${ip}:`, err);
+    const popup = document.getElementById('rules-popup');
+    const content = document.getElementById('rules-content');
+    content.innerHTML = `<div class="no-rules">Failed to connect to server ${ip}</div>`;
+    popup.style.display = 'block';
+  };
+}
+
+function closeRulesPopup() {
+  const popup = document.getElementById('rules-popup');
+  const title = popup.querySelector('h3');
+  title.textContent = '🧠 All Rules';
+  popup.style.display = 'none';
+}
+
+</script>
+
+</body>
+</html>

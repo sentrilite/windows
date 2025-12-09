@@ -9,5 +9,6 @@ require (
 
 require (
 	github.com/StackExchange/wmi v1.2.1 // indirect
+	github.com/bi-zone/etw v0.0.0-20210519083747-fe9042eb0ea8 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
 )
