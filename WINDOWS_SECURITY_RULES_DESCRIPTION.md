@@ -11,7 +11,7 @@ The `windows_security_rules.json` file contains security rules for Windows host-
   "windows_rules": [
     {
       "id": "unique_rule_identifier",
-      "severity": 1-4,              // 1=Critical, 2=High, 3=Medium, 4=Low
+      "severity": 1-2,              // 1=High (red), 2=Medium (blue) - rules currently use only 1 and 2
       "tags": ["tag1", "tag2"],     // Categorization tags
       "cmd": "powershell_command",  // PowerShell command to execute
       "sample_limit": 8,            // Maximum number of samples to include in alert
@@ -28,11 +28,9 @@ The `windows_security_rules.json` file contains security rules for Windows host-
 Each rule in the `windows_rules` array contains the following fields:
 
 - **id**: Unique identifier for the rule (e.g., `public_tcp_listeners`)
-- **severity**: Numeric severity level (1-4)
-  - **1**: Critical - Immediate security risk requiring urgent action
-  - **2**: High - Significant security risk requiring prompt attention
-  - **3**: Medium - Moderate security risk that should be addressed
-  - **4**: Low - Minor security concern
+- **severity**: Numeric severity level (1-2)
+  - **1**: High - Immediate or significant security risk requiring prompt action
+  - **2**: Medium - Moderate security risk that should be addressed
 - **tags**: Array of categorization tags for filtering and grouping
 - **cmd**: PowerShell command to execute for the security check
 - **sample_limit**: Maximum number of sample results to include in alert messages
@@ -40,8 +38,8 @@ Each rule in the `windows_rules` array contains the following fields:
 
 ## Rule Categories
 
-### Network Security (6 rules)
-- **Tags**: `network`, `posture`, `edr`, `dns`, `proxy`
+### Network Security (7 rules)
+- **Tags**: `network`, `posture`, `edr`, `dns`, `proxy`, `exposure`
 - **Purpose**: Detects network configuration issues, public listeners, suspicious connections, DNS settings, and proxy configurations
 - **Examples**:
   - Public TCP/UDP listeners (0.0.0.0)
@@ -56,26 +54,29 @@ Each rule in the `windows_rules` array contains the following fields:
   - Windows Firewall disabled
   - Windows Defender disabled or real-time protection off
 
-### User & Authentication (3 rules)
-- **Tags**: `users`, `privileges`, `password`, `policy`, `posture`
-- **Purpose**: Checks user accounts, privileges, and password policies
+### User & Authentication (4 rules)
+- **Tags**: `users`, `privileges`, `password`, `policy`, `posture`, `hardening`
+- **Purpose**: Checks user accounts, privileges, password policies, and authentication hardening
 - **Examples**:
   - Excessive administrator users
   - Guest account enabled
   - Weak password policies (non-expiring passwords, no password required)
+  - Anonymous SAM enumeration allowed
 
-### Persistence Mechanisms (6 rules)
-- **Tags**: `persistence`, `startup`, `scheduled_tasks`, `registry`, `wmi`
+### Persistence Mechanisms (9 rules)
+- **Tags**: `persistence`, `scheduled_tasks`, `registry`, `wmi`, `sysmon`, `edr`
 - **Purpose**: Detects various persistence mechanisms that could be used by malware
 - **Examples**:
-  - Suspicious startup programs
   - Scheduled tasks running as SYSTEM
   - Hidden scheduled tasks
-  - Registry autorun entries (user and system level)
-  - WMI event filters
+  - Registry autorun entries (system level)
+  - WMI event filters, consumers, and bindings
+  - Sysmon file creation in startup paths
+  - Sysmon registry autorun modifications
+  - Sysmon WMI persistence events
 
 ### File Permissions (2 rules)
-- **Tags**: `file`, `permissions`
+- **Tags**: `file`, `permissions`, `posture`
 - **Purpose**: Identifies insecure file permissions
 - **Examples**:
   - World-writable files in System32
@@ -85,7 +86,7 @@ Each rule in the `windows_rules` array contains the following fields:
 - **Tags**: `services`, `posture`
 - **Purpose**: Checks for suspicious or misconfigured services
 - **Examples**:
-  - Services with suspicious names or paths (containing 'temp')
+  - Services running from temp/user-writable paths
   - Services without descriptions
 
 ### Process Security (2 rules)
@@ -93,13 +94,12 @@ Each rule in the `windows_rules` array contains the following fields:
 - **Purpose**: Detects suspicious processes
 - **Examples**:
   - Processes running from temporary directories
-  - Processes with system-like names running from non-system locations
+  - Processes with system-like names running outside system directories
 
-### File Shares (2 rules)
-- **Tags**: `shares`, `posture`
+### File Shares (1 rule)
+- **Tags**: `shares`, `posture`, `exposure`
 - **Purpose**: Identifies insecure SMB share configurations
 - **Examples**:
-  - Public SMB shares
   - SMB shares with Everyone access
 
 ### Encryption & Security Features (3 rules)
@@ -110,167 +110,230 @@ Each rule in the `windows_rules` array contains the following fields:
   - UAC disabled
 
 ### Remote Access (1 rule)
-- **Tags**: `remote_access`, `rdp`
+- **Tags**: `remote_access`, `rdp`, `posture`
 - **Purpose**: Checks remote access configuration
 - **Examples**:
   - Remote Desktop enabled
 
 ### Audit & Logging (2 rules)
-- **Tags**: `audit`, `logging`, `forensics`
+- **Tags**: `audit`, `logging`, `forensics`, `tampering`, `posture`
 - **Purpose**: Validates audit and logging configuration
 - **Examples**:
   - Weak audit policies (No Auditing)
   - Security event log cleared
 
-### PowerShell Security (1 rule)
-- **Tags**: `powershell`, `execution`
-- **Purpose**: Checks PowerShell execution policy
+### PowerShell Security (2 rules)
+- **Tags**: `powershell`, `execution`, `logging`, `posture`
+- **Purpose**: Checks PowerShell execution policy and logging
 - **Examples**:
   - PowerShell execution policy set to Bypass or Unrestricted
+  - PowerShell transcription disabled
 
 ### System Updates (1 rule)
-- **Tags**: `updates`, `patch`
+- **Tags**: `updates`, `patch`, `posture`
 - **Purpose**: Validates Windows update configuration
 - **Examples**:
   - Windows automatic updates disabled
 
 ### Protocol Security (2 rules)
-- **Tags**: `smb`, `protocol`, `tls`, `encryption`
+- **Tags**: `smb`, `protocol`, `tls`, `encryption`, `posture`
 - **Purpose**: Checks for insecure protocol configurations
 - **Examples**:
   - SMBv1 enabled (deprecated and vulnerable)
   - Weak TLS cipher suites (RC4, DES, MD5)
 
+### Sysmon Detection (8 rules)
+- **Tags**: `sysmon`, `process`, `lolbins`, `network`, `dns`, `module-load`, `credential-access`, `lsass`, `persistence`, `file`, `registry`, `wmi`, `edr`
+- **Purpose**: Detects security events using Sysmon event log data
+- **Examples**:
+  - Sysmon process creations for common LOLBins
+  - Sysmon network connections initiated by suspicious tools
+  - Sysmon DNS queries to suspicious domains
+  - Sysmon DLL/image loads from temp locations
+  - Sysmon ProcessAccess to LSASS (credential dumping)
+  - Sysmon file creation in startup paths
+  - Sysmon registry changes in Run/RunOnce keys
+  - Sysmon WMI persistence events
+
+### Credential Access & Hardening (3 rules)
+- **Tags**: `credential-access`, `posture`, `hardening`, `lsass`
+- **Purpose**: Detects credential access risks and missing security hardening
+- **Examples**:
+  - LSA protection (RunAsPPL) not enabled
+  - WDigest UseLogonCredential enabled
+  - Sysmon ProcessAccess to LSASS
+
 ---
 
 ## Complete Rule List
 
-### Network Security
-
-1. **public_tcp_listeners** (Severity: 2)
-   - Detects TCP services listening on all interfaces (0.0.0.0). This exposes services to the network unnecessarily.
-
-2. **public_udp_listeners** (Severity: 2)
-   - Identifies UDP services listening on all interfaces. Public UDP listeners can be exploited for amplification attacks.
-
-3. **network_connections_suspicious** (Severity: 2)
-   - Detects network connections to external (non-private) IP addresses.
-
-4. **dns_servers_suspicious** (Severity: 2)
-   - Detects non-standard DNS servers. Suspicious DNS servers may be used for DNS hijacking.
-
-5. **proxy_settings** (Severity: 3)
-   - Lists proxy settings. Suspicious proxy configurations may indicate network interception.
-
 ### Firewall & Antivirus
 
-6. **firewall_disabled** (Severity: 3)
-   - Checks if Windows Firewall is disabled. Firewalls are essential for network security.
+1. **firewall_disabled** (Severity: 1)
+   - High risk: Windows Firewall disabled.
 
-7. **defender_disabled** (Severity: 3)
-   - Detects if Windows Defender is disabled. Antivirus protection is critical for security.
+2. **defender_disabled** (Severity: 1)
+   - High risk: Defender AV/real-time protection disabled.
 
 ### User & Authentication
 
-8. **admin_users** (Severity: 4)
-   - Lists all users in the Administrators group. Excessive admin users increase attack surface.
+3. **uac_disabled** (Severity: 1)
+   - High risk: UAC disabled.
 
-9. **guest_account_enabled** (Severity: 3)
-   - Detects if the Guest account is enabled. Guest accounts should be disabled for security.
+4. **guest_account_enabled** (Severity: 1)
+   - High risk: Guest account enabled.
 
-10. **password_policy_weak** (Severity: 3)
-    - Identifies users with weak password policies (non-expiring or no password required).
+5. **admin_users** (Severity: 2)
+   - Medium risk: Admin group membership review.
 
-### Persistence Mechanisms
+6. **password_policy_weak** (Severity: 2)
+   - Medium risk: Weak local password policy settings.
 
-11. **suspicious_startup_programs** (Severity: 2)
-    - Lists programs configured to run at startup. Suspicious entries may indicate malware persistence.
-
-12. **scheduled_tasks_system** (Severity: 3)
-    - Identifies scheduled tasks running as SYSTEM. These tasks have high privileges and should be reviewed.
-
-13. **scheduled_tasks_hidden** (Severity: 2)
-    - Identifies hidden scheduled tasks. Hidden tasks may be used for persistence.
-
-14. **registry_autorun_user** (Severity: 3)
-    - Lists user-level autorun registry entries. These can be used for persistence.
-
-15. **registry_autorun_system** (Severity: 3)
-    - Lists system-level autorun registry entries.
-
-16. **wmi_persistence** (Severity: 2)
-    - Detects WMI event filters that could be used for persistence.
-
-### File Permissions
-
-17. **world_writable_files_system32** (Severity: 2)
-    - Detects world-writable files in System32 directory. World-writable system files are security risks.
-
-18. **world_writable_files_programfiles** (Severity: 2)
-    - Identifies world-writable files in Program Files directory.
-
-### System Services
-
-19. **suspicious_services** (Severity: 2)
-    - Detects services with suspicious names or paths (containing 'temp').
-
-20. **services_no_description** (Severity: 4)
-    - Identifies services without descriptions. Services without descriptions may be suspicious.
-
-### Process Security
-
-21. **processes_temp_location** (Severity: 2)
-    - Detects processes running from temporary directories. This is often a sign of malware.
-
-22. **processes_suspicious_names** (Severity: 2)
-    - Identifies processes with system-like names running from non-system locations.
-
-### File Shares
-
-23. **shares_public** (Severity: 3)
-    - Identifies public SMB shares. Public shares can expose sensitive data.
-
-24. **shares_everyone_access** (Severity: 3)
-    - Detects SMB shares with Everyone access. This allows unauthorized access.
-
-### Encryption & Security Features
-
-25. **bitlocker_disabled** (Severity: 3)
-    - Checks if BitLocker encryption is disabled or incomplete on volumes.
-
-26. **uac_disabled** (Severity: 3)
-    - Checks if User Account Control (UAC) is disabled. UAC should be enabled for security.
-
-### Remote Access
-
-27. **remote_desktop_enabled** (Severity: 2)
-    - Detects if Remote Desktop is enabled. RDP should be disabled if not needed.
-
-### Audit & Logging
-
-28. **audit_policy_weak** (Severity: 3)
-    - Identifies audit policies set to 'No Auditing'. Proper auditing is essential for security.
-
-29. **event_log_cleared** (Severity: 2)
-    - Detects if security event log has been cleared. This may indicate an attempt to hide activity.
-
-### PowerShell Security
-
-30. **powershell_execution_policy_bypass** (Severity: 2)
-    - Identifies PowerShell execution policies set to Bypass or Unrestricted. This reduces security.
-
-### System Updates
-
-31. **windows_updates_disabled** (Severity: 3)
-    - Checks if Windows automatic updates are disabled. Regular updates are critical for security.
+7. **anonymous_sam_enumeration_allowed** (Severity: 2)
+   - Medium risk: RestrictAnonymousSAM not enforced (SAM enumeration risk).
 
 ### Protocol Security
 
-32. **smb_v1_enabled** (Severity: 2)
-    - Detects if SMBv1 is enabled. SMBv1 is deprecated and vulnerable. Should be disabled.
+8. **smb_v1_enabled** (Severity: 1)
+   - High risk: SMBv1 enabled (deprecated/vulnerable).
 
-33. **tls_weak_ciphers** (Severity: 2)
-    - Identifies weak TLS cipher suites (RC4, DES, MD5). These should be disabled.
+9. **tls_weak_ciphers_present** (Severity: 2)
+   - Medium risk: Weak TLS cipher suites present.
+
+### Audit & Logging
+
+10. **event_log_cleared** (Severity: 1)
+    - High risk: Security event log cleared (possible cover-up).
+
+11. **audit_policy_weak** (Severity: 2)
+    - Medium risk: Audit policies set to 'No Auditing'.
+
+### WMI Persistence
+
+12. **wmi_persistence_filters** (Severity: 1)
+    - High risk: WMI event filters can be used for persistence.
+
+13. **wmi_persistence_consumers** (Severity: 1)
+    - High risk: WMI CommandLineEventConsumer (persistence/execution).
+
+14. **wmi_persistence_bindings** (Severity: 1)
+    - High risk: WMI filter-to-consumer bindings (active persistence wiring).
+
+### Registry Persistence
+
+15. **registry_autorun_system** (Severity: 1)
+    - High risk: System-level autorun entries.
+
+### File Shares
+
+16. **shares_everyone_access** (Severity: 1)
+    - High risk: SMB shares with Everyone access.
+
+### File Permissions
+
+17. **world_writable_files_system32** (Severity: 1)
+    - High risk: World-writable files under System32.
+
+18. **world_writable_files_programfiles** (Severity: 2)
+    - Medium risk: World-writable files under Program Files.
+
+### Network Security
+
+19. **public_tcp_listeners** (Severity: 2)
+    - Medium risk: TCP services listening on all interfaces.
+
+20. **public_udp_listeners** (Severity: 2)
+    - Medium risk: UDP listeners on all interfaces.
+
+21. **network_connections_external_established** (Severity: 2)
+    - Medium risk: Established outbound connections to external IPs.
+
+22. **dns_servers_nonstandard** (Severity: 2)
+    - Medium risk: DNS servers review (nonstandard DNS can indicate hijack/implant).
+
+23. **proxy_settings** (Severity: 2)
+    - Medium risk: Proxy settings review (possible interception).
+
+### Scheduled Tasks
+
+24. **scheduled_tasks_system_running** (Severity: 2)
+    - Medium risk: Scheduled tasks running as SYSTEM (review).
+
+25. **scheduled_tasks_hidden** (Severity: 2)
+    - Medium risk: Hidden scheduled tasks.
+
+### System Services
+
+26. **suspicious_services_temp_path** (Severity: 2)
+    - Medium risk: Services running from temp/user-writable paths.
+
+27. **services_no_description** (Severity: 2)
+    - Medium risk: Services without descriptions (review for legitimacy).
+
+### Process Security
+
+28. **processes_temp_location** (Severity: 2)
+    - Medium risk: Processes running from temp/user-writable locations.
+
+29. **processes_systemlike_names_non_system_path** (Severity: 2)
+    - Medium risk: System-like process names running outside system directories.
+
+### Encryption & Security Features
+
+30. **bitlocker_not_fully_encrypted** (Severity: 2)
+    - Medium risk: BitLocker disabled or incomplete.
+
+### Remote Access
+
+31. **remote_desktop_enabled** (Severity: 2)
+    - Medium risk: RDP enabled (review if needed).
+
+### PowerShell Security
+
+32. **powershell_execution_policy_bypass** (Severity: 2)
+    - Medium risk: PowerShell execution policy permissive.
+
+33. **powershell_transcription_disabled** (Severity: 2)
+    - Medium risk: PowerShell transcription not enabled (reduces visibility).
+
+### System Updates
+
+34. **windows_updates_disabled_policy** (Severity: 2)
+    - Medium risk: Automatic updates disabled via policy.
+
+### Sysmon Detection
+
+35. **sysmon_process_create_lolbins** (Severity: 2)
+    - Medium risk: Sysmon process creations for common LOLBins.
+
+36. **sysmon_network_connect_suspicious_tools** (Severity: 2)
+    - Medium risk: Sysmon network connections initiated by suspicious tools.
+
+37. **sysmon_dns_queries_suspicious** (Severity: 2)
+    - Medium risk: Sysmon DNS queries to suspicious domains/TLDs (tune per environment).
+
+38. **sysmon_image_load_from_temp** (Severity: 2)
+    - Medium risk: Sysmon DLL/image loads from temp locations.
+
+39. **sysmon_process_access_lsass** (Severity: 1)
+    - High risk: Sysmon ProcessAccess to LSASS (credential dumping indicator). Requires Sysmon Event ID 10 enabled.
+
+40. **sysmon_file_create_in_startup_paths** (Severity: 1)
+    - High risk: File created in Startup folder paths (persistence).
+
+41. **sysmon_registry_autorun_modifications** (Severity: 1)
+    - High risk: Sysmon registry changes in Run/RunOnce persistence keys.
+
+42. **sysmon_wmi_persistence_events** (Severity: 1)
+    - High risk: Sysmon WMI persistence events (19/20/21).
+
+### Credential Access & Hardening
+
+43. **lsa_protection_disabled** (Severity: 1)
+    - High risk: LSA protection (RunAsPPL) not enabled (helps protect LSASS).
+
+44. **wdigest_use_logoncredential_enabled** (Severity: 1)
+    - High risk: WDigest UseLogonCredential enabled can expose cleartext credentials.
 
 ---
 
@@ -278,10 +341,9 @@ Each rule in the `windows_rules` array contains the following fields:
 
 | Level | Value | Description | Example |
 |-------|-------|-------------|---------|
-| Critical | 1 | Immediate security risk requiring urgent action | (Not currently used, but reserved) |
-| High | 2 | Significant security risk requiring prompt attention | Public listeners, suspicious processes, weak protocols |
-| Medium | 3 | Moderate security risk that should be addressed | Firewall disabled, UAC disabled, weak password policies |
-| Low | 4 | Minor security concern | Excessive admin users, services without descriptions |
+| High | 1 | Immediate or significant security risk requiring prompt action | Firewall/Defender disabled, Guest account enabled, public SMB shares, WMI persistence, LSASS access |
+| Medium | 2 | Moderate security risk that should be addressed | Public listeners, suspicious processes, weak protocols, Sysmon LOLBins |
+| Low | 3 | Default runtime event level (not used in rules; shown as green in dashboard/PDF) | Non-alert background activity |
 
 ---
 
@@ -299,7 +361,6 @@ Each rule in the `windows_rules` array contains the following fields:
 - `password` - Password policies
 - `policy` - Security policies
 - `persistence` - Persistence mechanisms
-- `startup` - Startup programs
 - `scheduled_tasks` - Scheduled tasks
 - `registry` - Registry configuration
 - `wmi` - Windows Management Instrumentation
@@ -316,6 +377,7 @@ Each rule in the `windows_rules` array contains the following fields:
 - `audit` - Audit policies
 - `logging` - Logging configuration
 - `forensics` - Forensic indicators
+- `tampering` - Log tampering indicators
 - `powershell` - PowerShell configuration
 - `execution` - Execution policies
 - `updates` - Windows updates
@@ -325,6 +387,13 @@ Each rule in the `windows_rules` array contains the following fields:
 - `tls` - TLS/SSL configuration
 - `dns` - DNS configuration
 - `proxy` - Proxy settings
+- `sysmon` - Sysmon event log detection
+- `lolbins` - Living Off The Land Binaries
+- `module-load` - DLL/module loading
+- `credential-access` - Credential access techniques
+- `lsass` - Local Security Authority Subsystem Service
+- `exposure` - Security exposure indicators
+- `hardening` - Security hardening checks
 
 #### Context Tags
 - `posture` - Security posture assessment
@@ -360,13 +429,15 @@ This command:
 Common PowerShell patterns used in rules:
 
 1. **Registry Checks**: `Get-ItemProperty -Path 'HKLM:\...' -Name '...'`
-2. **Service Checks**: `Get-Service | Where-Object { ... }`
+2. **Service Checks**: `Get-Service | Where-Object { ... }` or `Get-CimInstance Win32_Service`
 3. **Network Checks**: `Get-NetTCPConnection`, `Get-NetUDPEndpoint`
 4. **User Checks**: `Get-LocalUser`, `Get-LocalGroupMember`
 5. **Process Checks**: `Get-Process | Where-Object { ... }`
 6. **File System Checks**: `Get-ChildItem -Path '...' | Get-Acl`
 7. **Scheduled Task Checks**: `Get-ScheduledTask | Where-Object { ... }`
 8. **WMI Checks**: `Get-WmiObject -Namespace ... -Class ...`
+9. **Sysmon Checks**: `Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -FilterXPath ...`
+10. **Event Log Checks**: `Get-WinEvent -FilterHashtable @{LogName='...'; Id=...}`
 
 ---
 
@@ -378,6 +449,7 @@ Typical sample limits:
 - **1**: For binary checks (enabled/disabled)
 - **5-8**: For lists that may have many entries
 - **10**: For comprehensive lists
+- **200-300**: For Sysmon event log queries (to scan recent history)
 
 ---
 
@@ -426,28 +498,32 @@ When a rule detects an issue:
 4. **Relevant Tags**: Use appropriate tags for filtering and categorization
 5. **Safe Commands**: Commands should be read-only when possible
 6. **Error Handling**: Use `-ErrorAction SilentlyContinue` for registry/file checks
-7. **Sample Limits**: Set reasonable sample limits (typically 1-10)
+7. **Sample Limits**: Set reasonable sample limits (typically 1-10, higher for Sysmon queries)
 8. **PowerShell Best Practices**: Use native PowerShell cmdlets when available
 
 ---
 
 ## Rule Statistics
 
-- **Total Rules**: 33
-- **Network Security**: 6 rules
+- **Total Rules**: 44
+- **High Severity (1)**: 18 rules
+- **Medium Severity (2)**: 26 rules
+- **Network Security**: 7 rules
 - **Firewall & Antivirus**: 2 rules
-- **User & Authentication**: 3 rules
-- **Persistence Mechanisms**: 6 rules
+- **User & Authentication**: 4 rules
+- **Persistence Mechanisms**: 9 rules
 - **File Permissions**: 2 rules
 - **System Services**: 2 rules
 - **Process Security**: 2 rules
-- **File Shares**: 2 rules
-- **Encryption & Security Features**: 2 rules
+- **File Shares**: 1 rule
+- **Encryption & Security Features**: 3 rules
 - **Remote Access**: 1 rule
 - **Audit & Logging**: 2 rules
-- **PowerShell Security**: 1 rule
+- **PowerShell Security**: 2 rules
 - **System Updates**: 1 rule
 - **Protocol Security**: 2 rules
+- **Sysmon Detection**: 8 rules
+- **Credential Access & Hardening**: 3 rules
 
 ---
 
@@ -505,7 +581,10 @@ For questions or issues with Windows security rules:
 
 5. **False Positives**: Some rules may generate false positives in specific environments. Review and tune rules based on your organization's security policies.
 
+6. **Sysmon Requirements**: Sysmon detection rules (IDs 35-42) require Microsoft Sysmon to be installed and configured on the Windows host. Some rules require specific Sysmon event IDs to be enabled (e.g., Event ID 10 for `sysmon_process_access_lsass`).
+
+7. **Sysmon Event Log**: Sysmon rules query the `Microsoft-Windows-Sysmon/Operational` event log. Ensure Sysmon is properly configured and the event log is accessible.
+
 ---
 
-*This document describes 33 Windows security rules covering network security, system configuration, user management, persistence mechanisms, and compliance checks.*
-
+*This document describes 44 Windows security rules covering network security, system configuration, user management, persistence mechanisms, Sysmon detection, credential access, and compliance checks.*

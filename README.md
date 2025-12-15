@@ -122,7 +122,9 @@ The project is currently using a trial license.key .
 
 In a Powershell Terminal run:
 ```
-.\sentrilite.exe
+Start Sentrilite Service: \sentrilite-service.bat start
+Check Service Status: \sentrilite-service.bat status
+Stop Sentrilite Service: \sentrilite-service.bat stop
 ```
 Open the dashboard.html to check live telemetry:
 

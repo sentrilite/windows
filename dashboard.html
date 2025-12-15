@@ -13,6 +13,26 @@ into with Sentrilite.
 <head>
   <meta charset="UTF-8">
   <title>System Security Dashboard</title>
+  <script src="jspdf.umd.min.js"></script>
+  <script>
+    // Initialize jsPDF after the library loads
+    function initJsPDF() {
+      if (typeof window.jspdf !== 'undefined') {
+        window.jsPDF = window.jspdf.jsPDF;
+        console.log("✅ jsPDF initialized");
+      } else {
+        console.warn("⚠️ jsPDF library not found yet");
+      }
+    }
+    // Try immediately
+    initJsPDF();
+    // Also try when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initJsPDF);
+    } else {
+      initJsPDF();
+    }
+  </script>
   <style>
     body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(#0f0f0f, #1a1a1a); color: #eee; margin: 0; display: flex; height: 100vh; overflow: hidden; }
     .sidebar { width: 260px; background: #111; padding: 1em; border-right: 2px solid #333; display: flex; flex-direction: column; }
@@ -20,11 +40,24 @@ into with Sentrilite.
     .sidebar button:hover { background: #444; transform: scale(1.02); }
     .main-content { flex: 1; padding: 1em; display: flex; flex-direction: column; overflow: hidden; }
     .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1em; gap: 10px; }
+    .topbar button { padding: 0.5em 0.8em; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.9rem; }
+    .topbar .pdf-download-btn { 
+      background: #00cc7a; /* Fallback for browsers that don't support gradient */
+      background: linear-gradient(90deg, #00cc7a, #0099cc);
+      color: #ffffff !important;
+      box-shadow: 0 2px 8px rgba(0, 255, 153, 0.15);
+      display: inline-block;
+      visibility: visible;
+      opacity: 1;
+    }
+    .topbar .pdf-download-btn:hover {
+      opacity: 0.9;
+    }
     h1, h2, h3 { color: #fff; margin-top: 0; }
     .counters { display: flex; gap: 0.7em; margin-bottom: 1em; }
     .counters button { padding: 0.6em 1.2em; border-radius: 8px; font-weight: bold; font-size: 0.9em; border: none; cursor: pointer; transition: background 0.2s; }
     .risk-high { background: #e74c3c; color: white; }
-    .risk-medium { background: #f39c12; color: black; }
+    .risk-medium { background: #3378b8; color: white; } /* Medium risk is slightly darker blue for live streaming */
     .risk-low { background: #2ecc71; color: black; }
     .filters { display: flex; gap: 0.7em; margin-bottom: 1em; flex-wrap: wrap; }
     .filters input { padding: 0.5em; font-size: 0.85em; border-radius: 6px; border: none; width: 140px; }
@@ -74,6 +107,7 @@ into with Sentrilite.
   <div class="topbar">
     <h1>Sentrilite Live System Events Dashboard</h1>
     <div>
+      <button id="pdf-download-btn" class="pdf-download-btn" onclick="downloadPDFReport()">📄 Download PDF Report</button>
       <button id="pause-btn" onclick="togglePause()">⏸️ Pause</button>
       <button id="alert-btn" onclick="toggleAlerts()">🔔 Alerts On</button>
       <button onclick="showAlertHistory()">📜 Alert History</button>
@@ -121,6 +155,7 @@ let paused = false;
 let alertsEnabled = true;
 let events = [];
 let alertHistory = [];
+let allAlertsFromFile = []; // All alerts loaded from alerts.json
 let currentRiskFilter = null;
 let ws;
 
@@ -177,6 +212,32 @@ function connectWebSocket() {
 
 connectWebSocket();
 
+// Load alerts from alerts.json on page load to update counters
+async function loadAlertsOnPageLoad() {
+  const alertsFromFile = await loadAlertsFromJSON();
+  
+  // Convert alerts.json format to our alert format
+  alertsFromFile.forEach(alert => {
+    let riskLevel = alert.risk_level || alert.riskLevel || alert.severity || 0;
+    if (typeof riskLevel === 'string') {
+      riskLevel = parseInt(riskLevel, 10) || 0;
+    }
+    
+    allAlertsFromFile.push({
+      risk_level: riskLevel,
+      time: alert.time || alert.timestamp || new Date().toISOString(),
+      message: alert.message || alert.Message || alert.cmd || alert.comm || "Alert"
+    });
+  });
+  
+  // Update counters with all alerts
+  updateCounters();
+  console.log(`✅ Loaded ${allAlertsFromFile.length} alerts from alerts.json on page load`);
+}
+
+// Load alerts when page loads
+loadAlertsOnPageLoad();
+
 function togglePause() {
   paused = !paused;
   document.getElementById("pause-btn").textContent = paused ? "▶️ Resume" : "⏸️ Pause";
@@ -187,6 +248,41 @@ function toggleAlerts() {
   document.getElementById("alert-btn").textContent = alertsEnabled ? "🔔 Alerts On" : "🔕 Alerts Off";
 }
 
+function updateCounters() {
+  // Count from all alerts in alerts.json
+  let red = 0, orange = 0, green = 0;
+  
+  allAlertsFromFile.forEach(alert => {
+    const risk = normalizeRiskLevel(alert);
+    if (risk === 1) red++;
+    else if (risk === 2) orange++;
+    else if (risk === 3) green++;
+  });
+  
+  // Also count from streamed events
+  events.forEach(data => {
+    if (data.risk_level === 1) red++;
+    else if (data.risk_level === 2) orange++;
+    else if (data.risk_level === 3) green++;
+  });
+
+  document.getElementById("count-red").textContent = `High Risk: ${red}`;
+  document.getElementById("count-orange").textContent = `Medium: ${orange}`;
+  document.getElementById("count-green").textContent = `Low: ${green}`;
+}
+
+// Format timestamps for live log display: yyyy-mm-dd hh:mm:ss (local time)
+function formatLogTime(ms) {
+  const date = new Date(ms);
+  const yyyy = date.getFullYear();
+  const MM = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  return `${yyyy}-${MM}-${dd} ${hh}:${mm}:${ss}`;
+}
+
 function renderEvents() {
   const log = document.getElementById("event-log");
   log.innerHTML = "";
@@ -195,7 +291,16 @@ function renderEvents() {
   for (const data of events) {
     if (!shouldDisplay(data)) continue;
 
-    const ts = new Date((data.timestamp || 0) * 1000).toISOString();
+    // Use event timestamp when present; otherwise fall back to current time.
+    let tsMs;
+    if (data.timestamp) {
+      const t = data.timestamp;
+      // Support seconds or milliseconds
+      tsMs = t < 946684800000 ? t * 1000 : t;
+    } else {
+      tsMs = Date.now();
+    }
+    const ts = formatLogTime(tsMs);
     const tags = (data.tags || []).join(", ");
     const tagsDisplay = tags ? ` [${tags}]` : "";
     const portPart = data.port ? ` PORT=${data.port}` : "";
@@ -233,9 +338,8 @@ function renderEvents() {
     else green++;
   }
 
-  document.getElementById("count-red").textContent = `High Risk: ${red}`;
-  document.getElementById("count-orange").textContent = `Medium: ${orange}`;
-  document.getElementById("count-green").textContent = `Low: ${green}`;
+  // Update counters (includes alerts from file)
+  updateCounters();
 
   log.scrollTop = log.scrollHeight;
 }
@@ -268,11 +372,46 @@ function maybeShowAlert(data) {
   }
 }
 
-function showAlertHistory() {
+async function showAlertHistory() {
   const modal = document.getElementById("history-modal");
   const content = document.getElementById("history-content");
-  content.innerHTML = alertHistory.map(a => `[${a.time}] ${a.message}`).join("<br>");
+  content.innerHTML = "Loading alerts...";
   modal.classList.remove("hidden");
+
+  // Load all alerts from alerts.json
+  const alertsFromFile = await loadAlertsFromJSON();
+  
+  // Convert to alert format and filter high risk
+  const allAlerts = [];
+  alertsFromFile.forEach(alert => {
+    let riskLevel = alert.risk_level || alert.riskLevel || alert.severity || 0;
+    if (typeof riskLevel === 'string') {
+      riskLevel = parseInt(riskLevel, 10) || 0;
+    }
+    
+    // Only include high risk (risk level 1)
+    if (riskLevel === 1) {
+      const time = alert.time || alert.timestamp || new Date().toISOString();
+      const message = alert.message || alert.Message || alert.cmd || alert.comm || "Alert";
+      allAlerts.push({ time, message, risk_level: riskLevel });
+    }
+  });
+
+  // Sort by time (most recent first) and take top 50
+  allAlerts.sort((a, b) => {
+    const timeA = new Date(a.time).getTime();
+    const timeB = new Date(b.time).getTime();
+    return timeB - timeA; // Descending order
+  });
+
+  const top50 = allAlerts.slice(0, 50);
+  
+  if (top50.length === 0) {
+    content.innerHTML = "No high-risk alerts found.";
+  } else {
+    content.innerHTML = `<h4 style="margin-top: 0; margin-bottom: 10px; color: #fff;">Top 50 High Risk Alerts</h4>` + 
+                       top50.map(a => `[${a.time}] ${a.message}`).join("<br>");
+  }
 }
 
 function hideAlertHistory() {
@@ -413,8 +552,826 @@ function updateXdrRuleList(rules) {
   alert("🛡️ Current XDR Rules:\n\n" + list);
 }
 
+// PDF Report Generation Functions
+function normalizeRiskLevel(alert) {
+  let v = alert.risk_level ?? alert.RiskLevel ?? alert.severity;
+  if (typeof v === "number") return v;
+  if (typeof v === "string") {
+    const n = parseInt(v, 10);
+    if (!isNaN(n)) return n;
+    const s = v.toLowerCase();
+    if (s === "critical" || s === "high") return 1;
+    if (s === "medium") return 2;
+    if (s === "low") return 3;
+  }
+  return 0;
+}
 
+function getRiskRGB(level) {
+  const r = normalizeRiskLevel({ risk_level: level });
+  if (r === 1) return [231, 76, 60];       // 🔴 High - Red
+  if (r === 2) return [59, 143, 207];      // 🔵 Medium - slightly darker Blue
+  if (r === 3) return [0, 128, 0];         // 🟢 Low - Dark Green (more visible in Firefox)
+  return [80, 80, 80];                    // ⚫ Other/unknown - Gray
+}
 
+function computeAlertMetrics(alerts) {
+  const riskCounts = { 1: 0, 2: 0, 3: 0, other: 0 };
+  const ipCounts = {};
+  const procCounts = {};
+  const tagCounts = {};
+
+  alerts.forEach(a => {
+    const risk = normalizeRiskLevel(a);
+    if (risk === 1 || risk === 2 || risk === 3) {
+      riskCounts[risk]++;
+    } else {
+      riskCounts.other++;
+    }
+
+    const ip = a.ip || a.IP || "";
+    if (ip && ip !== "127.0.0.1" && ip !== "localhost") {
+      ipCounts[ip] = (ipCounts[ip] || 0) + 1;
+    }
+
+    const cmd = a.cmd || a.Comm || a.comm || a.message || a.msg || "";
+    if (cmd) {
+      const key = cmd.length > 80 ? cmd.slice(0, 77) + "..." : cmd;
+      procCounts[key] = (procCounts[key] || 0) + 1;
+    }
+
+    const tags = Array.isArray(a.tags) ? a.tags : [];
+    tags.forEach(t => {
+      if (!t || typeof t !== "string") return;
+      const tag = t.trim();
+      if (!tag || tag.toLowerCase() === "linux") return;
+      if (tag.startsWith("host:")) return;
+      if (tag.startsWith("count:")) return;
+      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+    });
+  });
+
+  const topTags = Object.entries(tagCounts)
+    .filter(([k, c]) => k && c >= 1)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+  const topProcesses = Object.entries(procCounts)
+    .filter(([k, c]) => k && c >= 5)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  const topIPs = Object.entries(ipCounts)
+    .filter(([k, c]) => k && c >= 5)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  return {
+    riskCounts,
+    ipCounts,
+    procCounts,
+    tagCounts,
+    topTags,
+    topProcesses,
+    topIPs
+  };
+}
+
+function createPieChartDataURL(riskCounts) {
+  const total = (riskCounts[1] || 0) + (riskCounts[2] || 0) + (riskCounts[3] || 0);
+  if (total === 0) return null;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 200;
+  canvas.height = 200;
+  const ctx = canvas.getContext("2d");
+
+  const cx = 100;
+  const cy = 100;
+  const r = 80;
+
+  const segments = [
+    { value: riskCounts[1] || 0, color: "#e74c3c" }, // High - red
+    { value: riskCounts[2] || 0, color: "#3b8fcf" }, // Medium - slightly darker blue
+    { value: riskCounts[3] || 0, color: "#27ae60" }  // Low - green
+  ];
+
+  let startAngle = -Math.PI / 2;
+  segments.forEach(seg => {
+    if (seg.value <= 0) return;
+    const angle = (seg.value / total) * Math.PI * 2;
+    const endAngle = startAngle + angle;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+
+    startAngle = endAngle;
+  });
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  return canvas.toDataURL("image/png");
+}
+
+function createTimeseriesHistogramDataURL(alerts) {
+  if (!alerts || alerts.length === 0) return null;
+
+  // Parse timestamps and extract valid events with timestamps
+  const events = [];
+  alerts.forEach(alert => {
+    let timestamp;
+    if (alert.timestamp) {
+      timestamp = typeof alert.timestamp === 'number' 
+        ? (alert.timestamp < 946684800000 ? alert.timestamp * 1000 : alert.timestamp)
+        : new Date(alert.timestamp).getTime();
+    } else if (alert.time) {
+      timestamp = new Date(alert.time).getTime();
+    } else {
+      return; // Skip alerts without timestamp
+    }
+
+    if (isNaN(timestamp)) return;
+
+    const risk = normalizeRiskLevel(alert);
+    events.push({ timestamp, risk });
+  });
+
+  if (events.length === 0) return null;
+
+  // Sort events by timestamp
+  events.sort((a, b) => a.timestamp - b.timestamp);
+
+  // Determine time window: use full range from first to last event
+  const latestTime = events[events.length - 1].timestamp;
+  const earliestTime = events[0].timestamp;
+  const timeRange = latestTime - earliestTime;
+  
+  // Use full range
+  const windowStart = earliestTime;
+  const windowEnd = latestTime;
+
+  // Create 1-hour time buckets
+  const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+  const buckets = {};
+  
+  events.forEach(event => {
+    // Round down to nearest hour
+    const bucketTime = Math.floor(event.timestamp / oneHour) * oneHour;
+    const bucketKey = bucketTime.toString();
+    
+    if (!buckets[bucketKey]) {
+      buckets[bucketKey] = { time: bucketTime, risk1: 0, risk2: 0, risk3: 0 };
+    }
+    
+    // Count events by risk level in this 1-hour window
+    if (event.risk === 1) buckets[bucketKey].risk1++;
+    else if (event.risk === 2) buckets[bucketKey].risk2++;
+    else if (event.risk === 3) buckets[bucketKey].risk3++;
+  });
+
+  const sortedBuckets = Object.values(buckets).sort((a, b) => a.time - b.time);
+  if (sortedBuckets.length === 0) return null;
+
+  // Find max count for scaling (across all risk levels)
+  let maxCount = 0;
+  sortedBuckets.forEach(b => {
+    const maxInBucket = Math.max(b.risk1, b.risk2, b.risk3);
+    if (maxInBucket > maxCount) maxCount = maxInBucket;
+  });
+
+  if (maxCount === 0) return null;
+
+  // Create canvas with more space
+  const canvas = document.createElement("canvas");
+  canvas.width = 250;
+  canvas.height = 200;
+  const ctx = canvas.getContext("2d");
+
+  const padding = 35;
+  const chartWidth = canvas.width - padding * 2;
+  const chartHeight = canvas.height - padding * 2;
+  const chartBottom = canvas.height - padding;
+  const chartTop = padding;
+  const barSpacing = chartWidth / sortedBuckets.length;
+  const maxBarWidth = 7; // Maximum 0.1 inch in pixels
+  const barWidth = Math.min(maxBarWidth, barSpacing * 0.6); // Use smaller of max width or 60% spacing
+
+  // Draw axes
+  ctx.strokeStyle = "#333";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padding, chartTop);
+  ctx.lineTo(padding, chartBottom);
+  ctx.lineTo(canvas.width - padding, chartBottom);
+  ctx.stroke();
+
+  // Draw separate bars for each risk level in each 1-hour time bucket
+  // Each bar's height represents the count of events in that 1-hour window
+  sortedBuckets.forEach((bucket, index) => {
+    const baseX = padding + (index * barSpacing) + (barSpacing / 2);
+    const singleBarWidth = barWidth / 3; // Divide width among 3 risk levels
+    const barGap = 0.5; // Small gap between bars
+    
+    // Draw risk 1 (high) bar - left position, height = count
+    if (bucket.risk1 > 0) {
+      const height = (bucket.risk1 / maxCount) * chartHeight;
+      const x = baseX - singleBarWidth - barGap;
+      ctx.fillStyle = "#e74c3c";
+      ctx.fillRect(x, chartBottom - height, singleBarWidth, height);
+    }
+
+    // Draw risk 2 (medium) bar - center position, height = count
+    if (bucket.risk2 > 0) {
+      const height = (bucket.risk2 / maxCount) * chartHeight;
+      const x = baseX - (singleBarWidth / 2);
+      ctx.fillStyle = "#3b8fcf"; // Medium - slightly darker blue
+      ctx.fillRect(x, chartBottom - height, singleBarWidth, height);
+    }
+
+    // Draw risk 3 (low) bar - right position, height = count
+    if (bucket.risk3 > 0) {
+      const height = (bucket.risk3 / maxCount) * chartHeight;
+      const x = baseX + barGap;
+      ctx.fillStyle = "#27ae60";
+      ctx.fillRect(x, chartBottom - height, singleBarWidth, height);
+    }
+  });
+
+  // Format timestamps for display with date and time
+  const formatTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${month}-${day}-${year} ${hours}:${minutes}`;
+  };
+
+  // Draw x-axis label "Time" just below the X-axis for clarity (avoid overlap)
+  ctx.fillStyle = "#333";
+  ctx.font = "10px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText("Time", Math.round(canvas.width / 2), chartBottom + 20);
+  
+  // Draw start and end time labels with date, slightly below the X-axis
+  ctx.font = "8px Arial";
+  ctx.textAlign = "left";
+  ctx.fillText(formatTime(windowStart), padding, chartBottom + 12);
+  
+  ctx.textAlign = "right";
+  ctx.fillText(formatTime(windowEnd), canvas.width - padding, chartBottom + 12);
+  
+  // Y-axis label "Alerts" – move slightly left of axis and increase size to reduce blur
+  ctx.save();
+  ctx.translate(padding - 22, Math.round((chartTop + chartBottom) / 2));
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = "center";
+  ctx.font = "bold 10px Arial";
+  ctx.fillText("Alerts", 0, 0);
+  ctx.restore();
+
+  return canvas.toDataURL("image/png");
+}
+
+function buildSummaryPage(doc, alerts, metrics, generatedAt) {
+  const totalAlerts = alerts.length;
+  const { riskCounts, topTags, topProcesses, topIPs } = metrics;
+
+  doc.setFontSize(18);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(0, 0, 0);
+  doc.text("Sentrilite Alert Report", 20, 20);
+
+  // Get machine FQDN/IP address
+  const hostname = window.location.hostname || "localhost";
+  const hostInfo = hostname === "localhost" || hostname === "" ? "localhost" : hostname;
+  
+  doc.setFontSize(11);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(60, 60, 60);
+  doc.text(`Machine: ${hostInfo}`, 20, 26);
+
+  doc.setFontSize(10);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(60, 60, 60);
+  doc.text(`Generated at: ${generatedAt}`, 20, 30);
+  doc.line(20, 32, 190, 32);
+
+  // Charts row: Pie chart on left, Timeseries histogram on right
+  doc.setFontSize(12);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(20, 20, 20);
+  doc.text("Alerts Risk Distribution", 20, 40);
+  
+  // Event Timeline with dates
+  const timeseriesDataURL = createTimeseriesHistogramDataURL(alerts);
+  let timelineTitle = "Event Timeline";
+  if (timeseriesDataURL && alerts.length > 0) {
+    const events = [];
+    alerts.forEach(alert => {
+      let timestamp;
+      if (alert.timestamp) {
+        timestamp = typeof alert.timestamp === 'number' 
+          ? (alert.timestamp < 946684800000 ? alert.timestamp * 1000 : alert.timestamp)
+          : new Date(alert.timestamp).getTime();
+      } else if (alert.time) {
+        timestamp = new Date(alert.time).getTime();
+      }
+      if (timestamp && !isNaN(timestamp)) events.push(timestamp);
+    });
+    if (events.length > 0) {
+      events.sort((a, b) => a - b);
+      const startDate = new Date(events[0]);
+      const endDate = new Date(events[events.length - 1]);
+      const formatDate = (d) => {
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const year = String(d.getFullYear()).slice(-2);
+        return `${month}-${day}-${year}`;
+      };
+      timelineTitle = `Event Timeline (${formatDate(startDate)} to ${formatDate(endDate)})`;
+    }
+  }
+  // Render timeline title in bold for emphasis
+  doc.setFont(undefined, "bold");
+  doc.text(timelineTitle, 100, 40);
+
+  // Timeseries histogram position (X-axis at y=110)
+  const timeseriesY = 45; // Start below title
+  const timeseriesHeight = 70;
+  const timeseriesXAxisY = timeseriesY + timeseriesHeight; // X-axis position
+
+  if (timeseriesDataURL) {
+    // Use more space for timeseries: start earlier and make wider
+    doc.addImage(timeseriesDataURL, "PNG", 85, timeseriesY, 105, timeseriesHeight);
+  }
+
+  // Pie chart: align base with X-axis of timeseries (X-axis is at timeseriesXAxisY)
+  const pieDataURL = createPieChartDataURL(riskCounts);
+  if (pieDataURL) {
+    // Make pie chart slightly bigger: increase from 56 to 65
+    const pieHeight = 65;
+    // Starting from previous position (0.1 inch up, 0.2 inch left),
+    // move 0.1 inch right and 0.1 inch down (~7.2 points each).
+    const pieY = timeseriesXAxisY - pieHeight; // back to align with X-axis
+    const pieX = 20 - 14.4 + 7.2;              // net 0.1 inch left from original
+    doc.addImage(pieDataURL, "PNG", pieX, pieY, 65, pieHeight);
+  }
+
+  // Legend and Breakdown row: Below pie chart, moved 0.5 inch (14.17 points) down
+  const legendX = 20;
+  let legendY = 115 + 14.17; // 0.5 inch = 14.17 points
+
+  doc.setFontSize(11.4); // ~10% bigger than 10.35
+  doc.setTextColor(20, 20, 20);
+  doc.setFont(undefined, "bold");
+  doc.text("Risk Color Legend", legendX, legendY);
+  legendY += 8;
+
+  doc.setFillColor(231, 76, 60);
+  doc.rect(legendX, legendY - 4, 4, 4, "F");
+  doc.setTextColor(40, 40, 40);
+  doc.setFont("Courier New", "normal");
+  doc.text("Critical / High risk", legendX + 6, legendY);
+  legendY += 5;
+
+  doc.setFillColor(59, 143, 207);
+  doc.rect(legendX, legendY - 4, 4, 4, "F");
+  doc.setFont("Courier New", "normal");
+  doc.text("Medium risk", legendX + 6, legendY);
+  legendY += 8;
+
+  // Alert Breakdown further to the right, moved 0.5 inch down
+  const breakdownX = 120;
+  let breakdownY = 115 + 14.17; // 0.5 inch = 14.17 points
+
+  const highCount = riskCounts[1] || 0;
+  const mediumCount = riskCounts[2] || 0;
+  const lowCount = riskCounts[3] || 0;
+  const otherCount = riskCounts.other || 0;
+  const totalCount = highCount + mediumCount + lowCount + otherCount;
+
+  doc.setFontSize(12.65); // ~10% bigger than 11.5
+  doc.setTextColor(20, 20, 20);
+  doc.setFont(undefined, "bold");
+  doc.text("Alert Breakdown", breakdownX, breakdownY);
+  breakdownY += 6;
+
+  doc.setFontSize(9);
+  doc.setTextColor(40, 40, 40);
+  doc.setFont("Courier New", "normal");
+  doc.text(`High Risk: ${highCount}`, breakdownX, breakdownY); breakdownY += 5;
+  doc.setFont("Courier New", "normal");
+  doc.text(`Medium Risk: ${mediumCount}`, breakdownX, breakdownY); breakdownY += 5;
+  doc.setFont("Courier New", "normal");
+  doc.text(`Low Risk: ${lowCount}`, breakdownX, breakdownY); breakdownY += 5;
+  if (otherCount > 0) {
+    doc.setFont("Courier New", "normal");
+    doc.text(`Other: ${otherCount}`, breakdownX, breakdownY);
+    breakdownY += 5;
+  }
+  doc.setFont("Courier New", "normal");
+  doc.text(`Total: ${totalCount}`, breakdownX, breakdownY);
+
+  // Tags Summary and Top Processes below Alert Breakdown (with proper spacing)
+  // breakdownY already points to the end of Alert Breakdown (after "Total" line)
+  // Move this block DOWN by 0.25 inch (~18 points) relative to the current position
+  let tagsY = breakdownY + 8 + 18;
+  // Cap at reasonable position to stay on page 1 (A4 page height is ~280 points)
+  if (tagsY > 200) {
+    tagsY = 200; // Cap at safe position to stay on page 1
+  }
+
+  // Store the starting Y for Top Processes (same as Tags Summary start)
+  let procsX = 100;
+  let procsY = tagsY; // Start at same Y as Tags Summary
+
+  doc.setFontSize(12.1); // ~10% bigger than 11
+  doc.setTextColor(20, 20, 20);
+  doc.setFont(undefined, "bold");
+  doc.text("Tags Summary (top 10):", 20, tagsY);
+  tagsY += 6;
+
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
+  doc.setFont("Courier New", "normal");
+  if (!topTags || topTags.length === 0) {
+    doc.text("No meaningful tags present in alerts.", 23, tagsY);
+    tagsY += 4.5;
+  } else {
+    topTags.forEach(([tag, count]) => {
+      doc.text(`${tag}: ${count}`, 23, tagsY);
+      tagsY += 4.5;
+    });
+  }
+
+  doc.setFontSize(12.1); // ~10% bigger than 11
+  doc.setTextColor(20, 20, 20);
+  doc.setFont(undefined, "bold");
+  doc.text("Top Processes / Commands", procsX, procsY);
+  procsY += 6;
+
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
+  doc.setFont("Courier New", "normal");
+  if (!topProcesses || topProcesses.length === 0) {
+    doc.text("No commands with count > 5.", procsX, procsY);
+    procsY += 4.5;
+  } else {
+    topProcesses.forEach(([cmd, count]) => {
+      const text = `${cmd} (${count})`;
+      const wrapped = doc.splitTextToSize(text, 75);
+      wrapped.forEach(line => {
+        doc.text(line, procsX, procsY);
+        procsY += 4.5;
+      });
+    });
+  }
+
+  procsY += 4;
+  doc.setFontSize(12.1); // ~10% bigger than 11
+  doc.setTextColor(20, 20, 20);
+  doc.setFont(undefined, "bold");
+  doc.text("Top Source IPs", procsX, procsY);
+  procsY += 6;
+
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
+  doc.setFont("Courier New", "normal");
+  if (!topIPs || topIPs.length === 0) {
+    doc.text("No IPs with count > 5.", procsX, procsY);
+  } else {
+    topIPs.forEach(([ip, count]) => {
+      doc.text(`${ip} (${count})`, procsX, procsY);
+      procsY += 4.5;
+    });
+  }
+}
+
+function formatTimestamp(ts) {
+  if (!ts) return "unknown-time";
+  
+  let date;
+  
+  // If it's already a string (ISO format), try to parse it
+  if (typeof ts === 'string') {
+    try {
+      date = new Date(ts);
+      if (isNaN(date.getTime())) {
+        return ts; // Return as-is if not a valid date string
+      }
+    } catch (e) {
+      return ts;
+    }
+  } else if (typeof ts === 'number') {
+    // If it's a number (Unix timestamp)
+    // Check if it's in seconds (less than year 2000 in milliseconds)
+    date = ts < 946684800000 ? new Date(ts * 1000) : new Date(ts);
+    if (isNaN(date.getTime())) {
+      return String(ts);
+    }
+  } else {
+    return String(ts);
+  }
+  
+  // Format as mm-dd-yy hh:mm:ss (no timezone)
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  
+  return `${month}-${day}-${year} ${hours}:${minutes}:${seconds}`;
+}
+
+function buildDetailsPages(doc, alerts) {
+  const sortedAlerts = alerts.slice().sort((a, b) => {
+    const ra = normalizeRiskLevel(a) || 99;
+    const rb = normalizeRiskLevel(b) || 99;
+    if (ra !== rb) return ra - rb;
+    const ta = (a.time || a.timestamp || "").toString();
+    const tb = (b.time || b.timestamp || "").toString();
+    return ta.localeCompare(tb);
+  });
+
+  const colTimeX = 10;
+  const colRiskX = 48;
+  const colIPX = 62;
+  const colPIDX = 92;
+  const colMsgX = 110;
+  const rowHeightMin = 6;
+
+  function drawPageHeader(doc, isContinuation) {
+    doc.setFontSize(14);
+    doc.setTextColor(20, 20, 20);
+    doc.setFont(undefined, "bold");
+    doc.text(isContinuation ? "Alert Details (cont.)" : "Alert Details", 10, 20);
+    
+    // Draw table header
+    const headerY = 28;
+    doc.setFillColor(230, 230, 230);
+    doc.setDrawColor(200, 200, 200);
+    doc.rect(10, headerY - 4, 190 - 10, 6, "F");
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, "bold");
+    doc.setTextColor(20, 20, 20);
+    doc.text("Time", colTimeX, headerY);
+    doc.text("Risk", colRiskX, headerY);
+    doc.text("IP", colIPX, headerY);
+    doc.text("PID", colPIDX, headerY);
+    doc.text("Message / Tags", colMsgX, headerY);
+    
+    return headerY + 6;
+  }
+
+  doc.addPage();
+  let y = drawPageHeader(doc, false);
+
+  sortedAlerts.forEach(a => {
+    const ts = formatTimestamp(a.time || a.timestamp);
+    const riskN = normalizeRiskLevel(a) || "?";
+    const ip = a.ip || a.IP || "-";
+    const pid = (a.pid != null && a.pid !== undefined) ? String(a.pid) : "-";
+    const msgBase = a.message || a.msg || a.description || a.cmd || a.comm || "Unknown event";
+    const tagsArr = Array.isArray(a.tags) ? a.tags : [];
+    const tagsStr = tagsArr.length ? ` [tags: ${tagsArr.join(", ")}]` : "";
+    const fullMsg = msgBase + tagsStr;
+
+    const wrappedMsg = doc.splitTextToSize(fullMsg, 80);
+    const msgLines = wrappedMsg.length || 1;
+    const rowHeight = Math.max(rowHeightMin, msgLines * 4.2);
+
+    if (y + rowHeight > 285) {
+      doc.addPage();
+      y = drawPageHeader(doc, true);
+    }
+
+    // Ensure font size is set to 9 for data rows
+    doc.setFontSize(9);
+    doc.setFont(undefined, "normal");
+    
+    let [rr, gg, bb] = getRiskRGB(riskN);
+    // In Alert Details only, make medium-risk (blue) slightly darker for readability
+    if (riskN === 2) {
+      rr = 45; gg = 120; bb = 185; // slightly darker blue than summary charts
+    }
+    
+    // For Firefox compatibility, set color explicitly for each text element
+    // Show full timestamp without truncation
+    // Use normal weight for colored alert details text
+    doc.setFont(undefined, "normal");
+    doc.setTextColor(rr, gg, bb);
+    doc.text(ts, colTimeX, y);
+    
+    doc.setTextColor(rr, gg, bb);
+    doc.text(String(riskN), colRiskX, y);
+    
+    doc.setTextColor(rr, gg, bb);
+    doc.text(String(ip), colIPX, y);
+    
+    doc.setTextColor(rr, gg, bb);
+    doc.text(String(pid), colPIDX, y);
+
+    // Message column also uses the same risk color
+    let msgY = y;
+    wrappedMsg.forEach(line => {
+      doc.setTextColor(rr, gg, bb);
+      doc.text(line, colMsgX, msgY);
+      msgY += 4.2;
+    });
+
+    y += rowHeight + 1.5;
+  });
+}
+
+async function loadAlertsFromJSON(forceFresh = false) {
+  return new Promise((resolve) => {
+    const host = getWebSocketHost();
+    const url = `ws://${host}:8765`;
+    
+    console.log("📥 Fetching fresh alerts via WebSocket:", url);
+    
+    // Create a new WebSocket connection to ensure fresh data (no caching)
+    const ws = new WebSocket(url);
+    let resolved = false;
+    
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        ws.close();
+        console.warn("⚠️ Timeout fetching alerts via WebSocket");
+        resolve([]);
+      }
+    }, 30000); // 30 second timeout to allow slower backends
+    
+    ws.onopen = () => {
+      console.log("📤 Sending get_alerts request (fresh fetch, no cache)");
+      // Send request - backend should read fresh from alerts.json file each time
+      // The backend code reads from file on each request, so this should always be fresh
+      ws.send(JSON.stringify({ 
+        type: "get_alerts"
+      }));
+    };
+    
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "alert_list" && Array.isArray(data.alerts)) {
+          clearTimeout(timeout);
+          if (!resolved) {
+            resolved = true;
+            ws.close();
+            console.log(`✅ Loaded ${data.alerts.length} fresh alerts from alerts.json`);
+            resolve(data.alerts);
+          }
+        }
+      } catch (error) {
+        console.warn("⚠️ Error parsing alerts response:", error);
+        if (!resolved) {
+          clearTimeout(timeout);
+          resolved = true;
+          ws.close();
+          resolve([]);
+        }
+      }
+    };
+    
+    ws.onerror = (error) => {
+      console.warn("⚠️ WebSocket error fetching alerts:", error);
+      if (!resolved) {
+        clearTimeout(timeout);
+        resolved = true;
+        ws.close();
+        resolve([]);
+      }
+    };
+    
+    ws.onclose = () => {
+      if (!resolved) {
+        clearTimeout(timeout);
+        resolved = true;
+        console.warn("⚠️ WebSocket closed before receiving alerts");
+        resolve([]);
+      }
+    };
+  });
+}
+
+async function downloadPDFReport() {
+  // Check if jsPDF is loaded
+  if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
+    console.error("jsPDF library not found.");
+    console.log("window.jspdf:", typeof window.jspdf);
+    console.log("window.jsPDF:", typeof window.jsPDF);
+    alert("PDF library is not loaded. Please ensure jspdf.umd.min.js is available in the directory and refresh the page.");
+    return;
+  }
+
+  // Initialize jsPDF if needed
+  if (typeof window.jsPDF === 'undefined' && typeof window.jspdf !== 'undefined') {
+    window.jsPDF = window.jspdf.jsPDF;
+    console.log("✅ jsPDF initialized in downloadPDFReport");
+  }
+
+  // Final check
+  if (typeof window.jsPDF === 'undefined') {
+    console.error("jsPDF is still undefined after initialization attempt");
+    alert("Failed to initialize PDF library. Please refresh the page.");
+    return;
+  }
+
+  console.log("📊 Generating PDF report...");
+  console.log("📥 Loading fresh alerts from alerts.json (no cache)...");
+  console.log("🔄 Creating new WebSocket connection to ensure fresh data...");
+
+  // Always load fresh alerts from alerts.json file (force fresh fetch, no cache)
+  // Create a new WebSocket connection each time to ensure no caching
+  // This ensures the backend reads fresh from alerts.json file
+  const alertsFromFile = await loadAlertsFromJSON(true);
+  
+  console.log(`📊 Received ${alertsFromFile.length} fresh alerts from backend (timestamp: ${new Date().toISOString()})`);
+  
+  if (alertsFromFile.length === 0) {
+    console.log("⚠️ No alerts received from backend. alerts.json may be empty or deleted.");
+  }
+  
+  // Convert alerts.json format to our alert format
+  // ONLY use alerts from alerts.json - do not include streamed events or alert history
+  const allAlerts = [];
+  
+  alertsFromFile.forEach(alert => {
+    // Parse timestamp
+    let timestamp;
+    if (alert.timestamp) {
+      timestamp = typeof alert.timestamp === 'number' 
+        ? (alert.timestamp < 946684800000 ? alert.timestamp * 1000 : alert.timestamp)
+        : new Date(alert.timestamp).getTime() / 1000;
+    } else if (alert.time) {
+      timestamp = typeof alert.time === 'string' 
+        ? new Date(alert.time).getTime() / 1000
+        : (alert.time < 946684800000 ? alert.time : alert.time / 1000);
+    } else {
+      timestamp = Date.now() / 1000;
+    }
+
+    // Get risk level
+    let riskLevel = alert.risk_level || alert.riskLevel || alert.severity || 0;
+    if (typeof riskLevel === 'string') {
+      riskLevel = parseInt(riskLevel, 10) || 0;
+    }
+
+    allAlerts.push({
+      time: alert.time || (timestamp ? new Date(timestamp * 1000).toISOString() : new Date().toISOString()),
+      timestamp: timestamp,
+      risk_level: riskLevel,
+      ip: alert.ip || alert.IP || "",
+      pid: alert.pid || alert.PID || null,
+      cmd: alert.cmd || alert.Cmd || alert.comm || alert.Comm || "",
+      message: alert.message || alert.Message || alert.cmd || alert.comm || "Alert",
+      tags: alert.tags || alert.Tags || []
+    });
+  });
+
+  // NOTE: Removed streamed events and alert history - PDF report now ONLY uses alerts.json
+
+  if (allAlerts.length === 0) {
+    alert("No alerts found in alerts.json or streamed events. The report requires alerts with risk levels.");
+    return;
+  }
+
+  console.log(`✅ Total alerts for PDF: ${allAlerts.length} (ONLY from alerts.json, no streamed events or alert history)`);
+
+  const metrics = computeAlertMetrics(allAlerts);
+  const nowStr = new Date().toLocaleString();
+
+  const doc = new jsPDF();
+
+  // Build details first (page 2+)
+  buildDetailsPages(doc, allAlerts);
+
+  // Go back to page 1 and render summary
+  doc.setPage(1);
+  buildSummaryPage(doc, allAlerts, metrics, nowStr);
+
+  doc.save("Sentrilite_Dashboard_Report.pdf");
+  console.log(`✅ PDF report generated with ${allAlerts.length} alerts`);
+}
+
+</script>
+<script>
+// Ensure jsPDF is available after page load
+if (typeof window.jspdf !== 'undefined' && typeof window.jsPDF === 'undefined') {
+  window.jsPDF = window.jspdf.jsPDF;
+}
 </script>
 </body>
 </html>
