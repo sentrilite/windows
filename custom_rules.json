@@ -351,11 +351,82 @@
     "risk_level": 1
   },
   {
-    "match_key": "file",
-    "match_values": [
-      "C:\\home-gaurav\\a.txt"
+    "match_key": "tags",
+    "match_values": ["dll-injection"],
+    "tags": [
+      "windows",
+      "dll-injection",
+      "code-injection",
+      "T1055"
     ],
-    "tags": ["gaurav"],
     "risk_level": 1
+  },
+  {
+    "match_key": "tags",
+    "match_values": ["lsass-access"],
+    "tags": [
+      "windows",
+      "credential-access",
+      "lsass-access",
+      "T1003.001"
+    ],
+    "risk_level": 1
+  },
+  {
+    "match_key": "msg_type_str",
+    "match_values": [
+      "SYSMON_CREATE_REMOTE_THREAD"
+    ],
+    "tags": [
+      "windows",
+      "injection",
+      "remote-thread",
+      "T1055"
+    ],
+    "risk_level": 1
+  },
+  {
+    "match_key": "msg_type_str",
+    "match_values": [
+      "SYSMON_PROCESS_ACCESS"
+    ],
+    "tags": [
+      "windows",
+      "process-access",
+      "suspicious-access"
+    ],
+    "risk_level": 2
+  },
+  {
+    "match_key": "tags",
+    "match_values": ["sysmon", "suspicious-powershell"],
+    "tags": [
+      "windows",
+      "powershell",
+      "obfuscated-script",
+      "T1059.001"
+    ],
+    "risk_level": 1
+  },
+  {
+    "match_key": "tags",
+    "match_values": ["wmi", "lateral-movement"],
+    "tags": [
+      "windows",
+      "wmi-lateral",
+      "remote-execution",
+      "T1047"
+    ],
+    "risk_level": 1
+  },
+  {
+    "match_key": "tags",
+    "match_values": ["dns", "network"],
+    "tags": [
+      "windows",
+      "dns-tunnel-candidate",
+      "T1071.004"
+    ],
+    "risk_level": 2
   }
 ]

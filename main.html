@@ -111,6 +111,97 @@ into with Sentrilite.
     background: var(--card-bg);
     border-right: 1px solid var(--border);
     padding: 1.5rem;
+    display: none; /* Hidden by default */
+    position: fixed;
+    left: 0;
+    top: 140px; /* Position below Rules Manager button (button at 100px + ~40px height) */
+    height: calc(100vh - 140px);
+    overflow-y: auto;
+    z-index: 100;
+  }
+
+  aside.show {
+    display: block;
+  }
+
+  .rules-manager-btn {
+    position: fixed;
+    left: 0;
+    top: 100px; /* Aligned with upload buttons */
+    z-index: 101;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-left: none;
+    border-radius: 0 0.375rem 0.375rem 0;
+    padding: 0.75rem 1rem;
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .rules-manager-btn:hover {
+    background: var(--primary);
+    color: var(--bg);
+  }
+
+  .charts-panel {
+    width: 416px; /* Increased by 30% from 320px */
+    background: var(--card-bg);
+    border-right: 1px solid var(--border);
+    padding: 1.5rem;
+    min-height: calc(100vh - 60px);
+  }
+
+  .chart-container {
+    margin-bottom: 1.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center content horizontally */
+  }
+
+  .chart-container h3 {
+    color: var(--primary);
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+  }
+
+  .chart-canvas {
+    width: 100%;
+    max-width: 280px;
+    height: auto;
+  }
+
+  .alert-breakdown {
+    margin-top: 0.5rem; /* Reduced margin to reduce overall height */
+  }
+
+  .alert-breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0; /* Reduced padding to reduce height */
+    border-bottom: 1px solid rgba(0, 255, 153, 0.1);
+  }
+
+  .alert-breakdown-item:last-child {
+    border-bottom: none;
+  }
+
+  .risk-legend {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .risk-color-box {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
   }
 
   .rule-box {
@@ -193,17 +284,38 @@ into with Sentrilite.
 
   main {
     flex: 1;
-    padding: 1.5rem;
+    padding: 1.5rem 1.5rem 1.5rem 0; /* No left padding - table starts immediately after charts panel */
+    margin-left: 25px; /* Reduced by 0.2 more inch (19px) - total 3.7 inches left from original */
+    min-width: 0; /* Allow flex item to shrink */
+    width: calc(100% - 25px); /* Fill remaining space */
+  }
+
+  @media (max-width: 1200px) {
+    main {
+      margin-left: 0;
+      width: 100%;
+    }
   }
 
   table {
-    width: 100%;
+    width: 100%; /* Fill all available space in main */
+    max-width: 100%; /* Ensure it doesn't overflow */
     border-collapse: collapse;
     background: var(--card-bg);
     margin-top: 1rem;
+    margin-left: 0; /* No left margin - start at left edge of main */
     border-radius: 0.5rem;
     overflow: hidden;
+    table-layout: fixed; /* Enable fixed column widths */
   }
+
+  table th:nth-child(1) { width: 6%; }   /* Select - reduced (short content: checkbox) */
+  table th:nth-child(2) { width: 36%; }  /* Server IP - increased by 50% from 24% to 36% */
+  table th:nth-child(3) { width: 8%; }   /* Status - reduced (short content: Online/Offline) */
+  table th:nth-child(4) { width: 8%; }   /* Alerts - reduced (short content: Critical/None) */
+  table th:nth-child(5) { width: 16%; }  /* Groups - reduced (medium content: tags) */
+  table th:nth-child(6) { width: 10%; } /* Dashboard - reduced (short content: Open link) */
+  table th:nth-child(7) { width: 16%; }  /* AI Insights - reduced (medium content: View/Refresh) */
 
   th {
     background: rgba(0, 255, 153, 0.05);
@@ -285,6 +397,74 @@ into with Sentrilite.
     padding-bottom: 0.5rem;
   }
 
+  #server-charts-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 2rem;
+    min-width: 1200px; /* Wider to show full timeseries */
+    max-width: 98%;
+    max-height: 90vh;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    display: none;
+  }
+
+  #server-charts-popup .close-x-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    line-height: 1;
+    transition: color 0.2s ease;
+  }
+
+  #server-charts-popup .close-x-btn:hover {
+    color: var(--primary);
+  }
+
+  .server-charts-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+
+  .server-chart-section {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    padding: 1rem;
+  }
+
+  .server-chart-section h4 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+  }
+
+  .server-chart-section.compact {
+    padding: 0.75rem; /* Reduced padding */
+  }
+
+  .server-chart-section.compact h4 {
+    font-size: 0.99rem; /* 10% smaller (1.1rem * 0.9) */
+    margin-bottom: 0.75rem;
+  }
+
+  .server-chart-section.compact * {
+    font-size: 0.9em; /* 10% smaller font */
+  }
+
   #rules-content {
     max-height: 60vh;
     overflow-y: auto;
@@ -332,6 +512,22 @@ into with Sentrilite.
       width: 100%;
       border-right: none;
       border-bottom: 1px solid var(--border);
+      position: relative;
+      top: 0;
+      height: auto;
+    }
+
+    .charts-panel {
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .rules-manager-btn {
+      position: relative;
+      top: 0;
+      border-radius: 0.375rem;
+      border: 1px solid var(--border);
     }
   }
 
@@ -358,7 +554,7 @@ into with Sentrilite.
 </style>
 <body>
 <header>
-  <span>Sentrilite: Hybrid-Cloud Observability & Security</span>
+  <span>Sentrilite: Server/Endpoint Detection & Response</span>
 <button onclick="downloadHumanReport()" style="
   font-size: 1.0rem;
   padding: 4px 6px;
@@ -403,7 +599,9 @@ into with Sentrilite.
 </div>
 
 <div class="container">
-  <aside>
+  <button class="rules-manager-btn" onclick="toggleRulesManager()">📋 Rules Manager</button>
+  
+  <aside id="rules-sidebar">
     <div class="rule-box">
       <h3>⛨ Create Rule</h3>
       <input id="edr-key" placeholder="match_key (e.g. cmd)" />
@@ -440,6 +638,49 @@ into with Sentrilite.
     </div>
   </aside>
 
+  <div class="charts-panel" id="charts-panel">
+    <div class="chart-container">
+      <h3>Alerts Risk Distribution</h3>
+      <canvas id="pie-chart-canvas" class="chart-canvas" width="360" height="360"></canvas>
+    </div>
+    <div class="chart-container">
+      <h3>Event Timeline</h3>
+      <canvas id="timeseries-chart-canvas" class="chart-canvas" width="437" height="312"></canvas>
+    </div>
+    <div class="chart-container">
+      <h3>Risk Color Legend</h3>
+      <div class="risk-legend">
+        <div class="risk-color-box" style="background: #e74c3c;"></div>
+        <span>Critical / High risk</span>
+      </div>
+      <div class="risk-legend">
+        <div class="risk-color-box" style="background: #3b8fcf;"></div>
+        <span>Medium risk</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      <h3>Alert Breakdown</h3>
+      <div class="alert-breakdown" id="alert-breakdown">
+        <div class="alert-breakdown-item">
+          <span>High Risk:</span>
+          <span id="breakdown-high">0</span>
+        </div>
+        <div class="alert-breakdown-item">
+          <span>Medium Risk:</span>
+          <span id="breakdown-medium">0</span>
+        </div>
+        <div class="alert-breakdown-item">
+          <span>Low Risk:</span>
+          <span id="breakdown-low">0</span>
+        </div>
+        <div class="alert-breakdown-item">
+          <span>Total:</span>
+          <span id="breakdown-total">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <main>
     <table>
       <thead>
@@ -473,11 +714,131 @@ into with Sentrilite.
   <div id="rules-content"></div>
   <button onclick="closeRulesPopup()">❌ Close</button>
 </div>
+
+<div id="server-charts-popup">
+  <button class="close-x-btn" onclick="closeServerChartsPopup()" title="Close">×</button>
+  <h3>🚨 Server Alert Details</h3>
+  <div id="server-charts-content">
+    <div class="server-charts-container">
+      <div class="server-chart-section">
+        <h4>Alerts Risk Distribution</h4>
+        <canvas id="server-pie-chart" width="300" height="300"></canvas>
+        <div style="margin-top: 1rem;">
+          <h5 style="color: var(--primary); margin-bottom: 0.5rem; font-size: 0.95rem;">Alert Breakdown</h5>
+          <div class="alert-breakdown" id="server-alert-breakdown"></div>
+        </div>
+      </div>
+      <div class="server-chart-section" style="grid-column: span 2;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+          <h4 style="margin: 0;">Event Timeline</h4>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <div class="risk-legend" style="margin: 0;">
+              <div class="risk-color-box" style="background: #e74c3c;"></div>
+              <span>Critical / High risk</span>
+            </div>
+            <div class="risk-legend" style="margin: 0;">
+              <div class="risk-color-box" style="background: #3b8fcf;"></div>
+              <span>Medium risk</span>
+            </div>
+          </div>
+        </div>
+        <div style="overflow-x: auto; width: 100%;">
+          <canvas id="server-timeseries-chart" width="1000" height="400" style="display: block;"></canvas>
+        </div>
+      </div>
+      <div class="server-chart-section compact">
+        <h4>Tags Summary (top 10)</h4>
+        <div id="server-tags-summary"></div>
+      </div>
+      <div class="server-chart-section compact" style="grid-column: span 2; width: auto; min-width: 400px;">
+        <h4>Top Processes / Commands</h4>
+        <div id="server-top-processes" style="word-wrap: break-word; overflow-wrap: break-word;"></div>
+      </div>
+    </div>
+  </div>
+  <button onclick="closeServerChartsPopup()">❌ Close</button>
+</div>
 <script src="jspdf.umd.min.js"></script>
 <script>window.jsPDF = window.jspdf.jsPDF;</script>
 <script>
 const insightsCache = {};   // 🧠 { ip: { text: "...", timestamp: 123456 } }
 const alertsSnapshot = {};  // 🧠 { ip: "alerts-stringified" }
+const allAlertsCache = {};  // Cache alerts from all servers for main charts
+
+function toggleRulesManager() {
+  const sidebar = document.getElementById('rules-sidebar');
+  sidebar.classList.toggle('show');
+}
+
+function updateMainCharts() {
+  // Collect alerts from all online servers
+  const allAlerts = [];
+  Object.keys(allAlertsCache).forEach(ip => {
+    const alerts = allAlertsCache[ip] || [];
+    alerts.forEach(alert => {
+      allAlerts.push({ ...alert, __server: ip });
+    });
+  });
+
+  if (allAlerts.length === 0) {
+    // Clear charts if no alerts
+    document.getElementById('breakdown-high').textContent = '0';
+    document.getElementById('breakdown-medium').textContent = '0';
+    document.getElementById('breakdown-low').textContent = '0';
+    document.getElementById('breakdown-total').textContent = '0';
+    return;
+  }
+
+  // Compute metrics
+  const metrics = computeAlertMetrics(allAlerts);
+  const riskCounts = metrics.riskCounts;
+
+  // Update breakdown
+  document.getElementById('breakdown-high').textContent = riskCounts[1] || 0;
+  document.getElementById('breakdown-medium').textContent = riskCounts[2] || 0;
+  document.getElementById('breakdown-low').textContent = riskCounts[3] || 0;
+  document.getElementById('breakdown-total').textContent = (riskCounts[1] || 0) + (riskCounts[2] || 0) + (riskCounts[3] || 0);
+
+  // Update pie chart
+  const pieCanvas = document.getElementById('pie-chart-canvas');
+  if (pieCanvas) {
+    const pieDataURL = createPieChartDataURL(riskCounts);
+    if (pieDataURL) {
+      const img = new Image();
+      img.onload = () => {
+        const ctx = pieCanvas.getContext('2d');
+        ctx.clearRect(0, 0, pieCanvas.width, pieCanvas.height);
+        ctx.drawImage(img, 0, 0, pieCanvas.width, pieCanvas.height);
+        
+        // Add counts below pie chart (font size increased by 15%)
+        ctx.fillStyle = "#e6f1ff"; // Use text color
+        ctx.font = "16px Arial"; // Increased from 14px by 15% (14 * 1.15 = 16.1, rounded to 16)
+        ctx.textAlign = "center";
+        const highCount = riskCounts[1] || 0;
+        const mediumCount = riskCounts[2] || 0;
+        const lowCount = riskCounts[3] || 0;
+        const yPos = pieCanvas.height - 15;
+        ctx.fillText(`High: ${highCount} | Medium: ${mediumCount} | Low: ${lowCount}`, pieCanvas.width / 2, yPos);
+      };
+      img.src = pieDataURL;
+    }
+  }
+
+  // Update timeseries chart
+  const timeseriesCanvas = document.getElementById('timeseries-chart-canvas');
+  if (timeseriesCanvas) {
+    const timeseriesDataURL = createTimeseriesHistogramDataURL(allAlerts);
+    if (timeseriesDataURL) {
+      const img = new Image();
+      img.onload = () => {
+        const ctx = timeseriesCanvas.getContext('2d');
+        ctx.clearRect(0, 0, timeseriesCanvas.width, timeseriesCanvas.height);
+        ctx.drawImage(img, 0, 0, timeseriesCanvas.width, timeseriesCanvas.height);
+      };
+      img.src = timeseriesDataURL;
+    }
+  }
+}
 
 function toggleAllServers(checkbox) {
   document.querySelectorAll(".select-server").forEach(cb => cb.checked = checkbox.checked);
@@ -525,6 +886,30 @@ function refreshAll() {
 
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: "health" }));
+      // Also fetch alerts for charts
+      setTimeout(() => {
+        const alertsWs = new WebSocket(`ws://${ip}:8765`);
+        alertsWs.onopen = () => {
+          alertsWs.send(JSON.stringify({ type: "get_alerts" }));
+        };
+        alertsWs.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === "alert_list" && Array.isArray(data.alerts)) {
+              allAlertsCache[ip] = data.alerts;
+              updateMainCharts();
+            }
+          } catch (err) {
+            console.error(`Error parsing alerts from ${ip}:`, err);
+          } finally {
+            alertsWs.close();
+          }
+        };
+        alertsWs.onerror = () => {
+          delete allAlertsCache[ip];
+          updateMainCharts();
+        };
+      }, 200);
     };
 
     ws.onmessage = (event) => {
@@ -555,6 +940,8 @@ function refreshAll() {
     ws.onerror = () => {
       document.getElementById(`status-${ip}`).innerHTML = `<span class="offline">Unreachable</span>`;
       document.getElementById(`alert-${ip}`).innerHTML = `<span class="none">Unknown</span>`;
+      delete allAlertsCache[ip];
+      updateMainCharts();
     };
 
     ws.onclose = () => {
@@ -898,10 +1285,10 @@ function computeNodeRiskMap(alerts) {
 
 function getRiskRGB(level) {
   const r = normalizeRiskLevel({ risk_level: level });
-  if (r === 1) return [200, 0, 0];       // 🔴 High
-  if (r === 2) return [230, 120, 0];     // 🟠 Medium
-  if (r === 3) return [0, 140, 0];       // 🟢 Low
-  return [80, 80, 80];                   // ⚫ Other/unknown
+  if (r === 1) return [231, 76, 60];       // 🔴 High - Red
+  if (r === 2) return [59, 143, 207];      // 🔵 Medium - slightly darker Blue
+  if (r === 3) return [0, 128, 0];         // 🟢 Low - Dark Green (more visible in Firefox)
+  return [80, 80, 80];                    // ⚫ Other/unknown - Gray
 }
 
 function normalizeRiskLevel(alert) {
@@ -940,7 +1327,7 @@ function computeAlertMetrics(alerts) {
     }
 
     const ip = a.ip || a.IP || "";
-    if (ip && ip !== "127.0.0.1") { // Filter out localhost
+    if (ip && ip !== "127.0.0.1" && ip !== "localhost") {
       ipCounts[ip] = (ipCounts[ip] || 0) + 1;
     }
 
@@ -977,23 +1364,23 @@ function computeAlertMetrics(alerts) {
   };
 }
 
-function createPieChartDataURL(riskCounts) {
+function createPieChartDataURL(riskCounts, width = 360, height = 360) {
   const total = (riskCounts[1] || 0) + (riskCounts[2] || 0) + (riskCounts[3] || 0);
   if (total === 0) return null;
 
   const canvas = document.createElement("canvas");
-  canvas.width = 200;
-  canvas.height = 200;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext("2d");
 
-  const cx = 100;
-  const cy = 100;
-  const r = 80;
+  const cx = width / 2; // Center X
+  const cy = height / 2; // Center Y
+  const r = Math.min(width, height) * 0.4; // Radius based on smaller dimension
 
   const segments = [
-    { value: riskCounts[1] || 0, color: "#e74c3c" }, // red
-    { value: riskCounts[2] || 0, color: "#f39c12" }, // orange
-    { value: riskCounts[3] || 0, color: "#27ae60" }  // green
+    { value: riskCounts[1] || 0, color: "#e74c3c" }, // High - red
+    { value: riskCounts[2] || 0, color: "#3b8fcf" }, // Medium - slightly darker blue
+    { value: riskCounts[3] || 0, color: "#27ae60" }  // Low - green
   ];
 
   let startAngle = -Math.PI / 2; // start at top
@@ -1022,6 +1409,236 @@ function createPieChartDataURL(riskCounts) {
   return canvas.toDataURL("image/png");
 }
 
+function createTimeseriesHistogramDataURL(alerts, canvasWidth = 437, canvasHeight = 312) {
+  if (!alerts || alerts.length === 0) return null;
+
+  // Parse timestamps and extract valid events with timestamps
+  const events = [];
+  alerts.forEach(alert => {
+    let timestamp;
+    if (alert.timestamp) {
+      timestamp = typeof alert.timestamp === 'number' 
+        ? (alert.timestamp < 946684800000 ? alert.timestamp * 1000 : alert.timestamp)
+        : new Date(alert.timestamp).getTime();
+    } else if (alert.time) {
+      timestamp = new Date(alert.time).getTime();
+    } else {
+      return; // Skip alerts without timestamp
+    }
+
+    if (isNaN(timestamp)) return;
+
+    const risk = normalizeRiskLevel(alert);
+    events.push({ timestamp, risk });
+  });
+
+  if (events.length === 0) return null;
+
+  // Sort events by timestamp
+  events.sort((a, b) => a.timestamp - b.timestamp);
+
+  // Determine time window: use full range from first to last event
+  const latestTime = events[events.length - 1].timestamp;
+  const earliestTime = events[0].timestamp;
+  const timeRange = latestTime - earliestTime;
+  
+  // Use full range
+  const windowStart = earliestTime;
+  const windowEnd = latestTime;
+
+  // Create 1-hour time buckets
+  const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+  const buckets = {};
+  
+  events.forEach(event => {
+    // Round down to nearest hour
+    const bucketTime = Math.floor(event.timestamp / oneHour) * oneHour;
+    const bucketKey = bucketTime.toString();
+    
+    if (!buckets[bucketKey]) {
+      buckets[bucketKey] = { time: bucketTime, risk1: 0, risk2: 0, risk3: 0 };
+    }
+    
+    // Count events by risk level in this 1-hour window
+    if (event.risk === 1) buckets[bucketKey].risk1++;
+    else if (event.risk === 2) buckets[bucketKey].risk2++;
+    else if (event.risk === 3) buckets[bucketKey].risk3++;
+  });
+
+  const sortedBuckets = Object.values(buckets).sort((a, b) => a.time - b.time);
+  if (sortedBuckets.length === 0) return null;
+
+  // Find max count for scaling (across all risk levels)
+  let maxCount = 0;
+  sortedBuckets.forEach(b => {
+    const maxInBucket = Math.max(b.risk1, b.risk2, b.risk3);
+    if (maxInBucket > maxCount) maxCount = maxInBucket;
+  });
+
+  if (maxCount === 0) return null;
+
+  // Create canvas with specified dimensions
+  const canvas = document.createElement("canvas");
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+  const ctx = canvas.getContext("2d");
+
+  const padding = 50; // Increased padding for larger canvas
+  const chartWidth = canvas.width - padding * 2;
+  const chartHeight = canvas.height - padding * 2;
+  const chartBottom = canvas.height - padding;
+  const chartTop = padding;
+  const barSpacing = chartWidth / sortedBuckets.length;
+  const maxBarWidth = 7; // Maximum 0.1 inch in pixels
+  const barWidth = Math.min(maxBarWidth, barSpacing * 0.6); // Use smaller of max width or 60% spacing
+
+  // Draw axes
+  ctx.strokeStyle = "#333";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padding, chartTop);
+  ctx.lineTo(padding, chartBottom);
+  ctx.lineTo(canvas.width - padding, chartBottom);
+  ctx.stroke();
+
+  // Draw separate bars for each risk level in each 1-hour time bucket
+  // Each bar's height represents the count of events in that 1-hour window
+  sortedBuckets.forEach((bucket, index) => {
+    const baseX = padding + (index * barSpacing) + (barSpacing / 2);
+    const singleBarWidth = barWidth / 3; // Divide width among 3 risk levels
+    const barGap = 0.5; // Small gap between bars
+    
+    // Draw risk 1 (high) bar - left position, height = count
+    if (bucket.risk1 > 0) {
+      const height = (bucket.risk1 / maxCount) * chartHeight;
+      const x = baseX - singleBarWidth - barGap;
+      ctx.fillStyle = "#e74c3c";
+      ctx.fillRect(x, chartBottom - height, singleBarWidth, height);
+    }
+
+    // Draw risk 2 (medium) bar - center position, height = count
+    if (bucket.risk2 > 0) {
+      const height = (bucket.risk2 / maxCount) * chartHeight;
+      const x = baseX - (singleBarWidth / 2);
+      ctx.fillStyle = "#3b8fcf"; // Medium - slightly darker blue
+      ctx.fillRect(x, chartBottom - height, singleBarWidth, height);
+    }
+
+    // Draw risk 3 (low) bar - right position, height = count
+    if (bucket.risk3 > 0) {
+      const height = (bucket.risk3 / maxCount) * chartHeight;
+      const x = baseX + barGap;
+      ctx.fillStyle = "#27ae60";
+      ctx.fillRect(x, chartBottom - height, singleBarWidth, height);
+    }
+  });
+
+  // Format timestamps for display with date and time
+  const formatTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${month}-${day}-${year} ${hours}:${minutes}`;
+  };
+
+  // Draw x-axis label "Time" just below the X-axis for clarity (avoid overlap)
+  ctx.fillStyle = "#ffffff"; // Bright white
+  ctx.font = "bold 15px Arial"; // Increased by 10% from 14px (14 * 1.1 = 15.4, rounded to 15)
+  ctx.textAlign = "center";
+  ctx.fillText("Time", Math.round(canvas.width / 2), chartBottom + 25);
+  
+  // Draw start and end time labels with date, slightly below the X-axis
+  ctx.font = "bold 13px Arial"; // Increased by 10% from 12px (12 * 1.1 = 13.2, rounded to 13)
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#ffffff"; // Bright white
+  ctx.fillText(formatTime(windowStart), padding, chartBottom + 15);
+  
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#ffffff"; // Bright white
+  ctx.fillText(formatTime(windowEnd), canvas.width - padding, chartBottom + 15);
+  
+  // Y-axis label "Alerts" – move slightly left of axis and increase size
+  ctx.save();
+  ctx.translate(padding - 22, Math.round((chartTop + chartBottom) / 2));
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = "center";
+  ctx.font = "bold 15px Arial"; // Increased by 10% from 14px (14 * 1.1 = 15.4, rounded to 15)
+  ctx.fillStyle = "#ffffff"; // Bright white
+  ctx.fillText("Alerts", 0, 0);
+  ctx.restore();
+
+  return canvas.toDataURL("image/png");
+}
+
+function formatTimestamp(ts) {
+  if (!ts) return "unknown-time";
+  
+  let date;
+  
+  // If it's already a string (ISO format), try to parse it
+  if (typeof ts === 'string') {
+    try {
+      date = new Date(ts);
+      if (isNaN(date.getTime())) {
+        return ts; // Return as-is if not a valid date string
+      }
+    } catch (e) {
+      return ts;
+    }
+  } else if (typeof ts === 'number') {
+    // If it's a number (Unix timestamp)
+    // Check if it's in seconds (less than year 2000 in milliseconds)
+    date = ts < 946684800000 ? new Date(ts * 1000) : new Date(ts);
+    if (isNaN(date.getTime())) {
+      return String(ts);
+    }
+  } else {
+    return String(ts);
+  }
+  
+  // Format as mm-dd-yy hh:mm:ss (no timezone)
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  
+  return `${month}-${day}-${year} ${hours}:${minutes}:${seconds}`;
+}
+
+function normalizeTriggeredByForPDF(s) {
+  s = (s || "").toString().trim();
+  if (!s) return "";
+
+  // Normalize separators/spaces
+  s = s.replace(/\s*—\s*/g, " — ");
+  s = s.replace(/\s+/g, " ");
+
+  // Prevent ugly breaks like "windows-use\nrs" by adding break opportunities at safe spots
+  // jsPDF can wrap on spaces; this ensures there *are* spaces around separators.
+  // Also split long single tokens on ":" and "/" with spaces around them.
+  s = s.replace(/\s*:\s*/g, ": ");      // "windows_checker:windows-users" -> "windows_checker: windows-users"
+  s = s.replace(/\s*\/\s*/g, " / ");    // "0.0.0.0" unchanged; "foo/bar" -> "foo / bar"
+
+  return s;
+}
+
+function splitTriggeredByForPDF(doc, text, maxWidth) {
+  const clean = normalizeTriggeredByForPDF(text);
+  if (!clean) return ["runtime-detection"];
+
+  // If it's still one huge token, force-break on hyphens as a last resort
+  // so we don't get mid-word breaks.
+  const hasSpaces = /\s/.test(clean);
+  const safe = hasSpaces ? clean : clean.replace(/-/g, "- ");
+
+  return doc.splitTextToSize(safe, maxWidth);
+}
+
 function buildSummaryPage(
   doc,
   alerts,
@@ -1034,105 +1651,168 @@ function buildSummaryPage(
   const totalAlerts = alerts.length;
   const { riskCounts, topTags, topProcesses, topIPs } = metrics;
 
-  // ---------- Header (similar to app.py draw_header) ----------
   doc.setFontSize(18);
   doc.setFont(undefined, "bold");
   doc.setTextColor(0, 0, 0);
   doc.text("Sentrilite Alert Report", 20, 20);
 
-  const isoLike = new Date().toISOString().replace(/\.\d+Z$/, "Z");
   doc.setFontSize(10);
+  doc.setFont(undefined, "bold");
   doc.setTextColor(60, 60, 60);
-  doc.text(`Generated at: ${isoLike}`, 20, 26);
+  doc.text(`Generated at: ${generatedAt}`, 20, 26);
   doc.line(20, 28, 190, 28);
 
-  // ---------- Label above pie chart ----------
-  doc.setFontSize(14);
+  // Charts row: Pie chart on left, Timeseries histogram on right
+  doc.setFontSize(12);
   doc.setFont(undefined, "bold");
   doc.setTextColor(20, 20, 20);
-  doc.text("Combined Alerts Distribution", 20, 36);
+  doc.text("Alerts Risk Distribution", 20, 38);
+  
+  // Event Timeline with dates
+  const timeseriesDataURL = createTimeseriesHistogramDataURL(alerts);
+  let timelineTitle = "Event Timeline";
+  if (timeseriesDataURL && alerts.length > 0) {
+    const events = [];
+    alerts.forEach(alert => {
+      let timestamp;
+      if (alert.timestamp) {
+        timestamp = typeof alert.timestamp === 'number' 
+          ? (alert.timestamp < 946684800000 ? alert.timestamp * 1000 : alert.timestamp)
+          : new Date(alert.timestamp).getTime();
+      } else if (alert.time) {
+        timestamp = new Date(alert.time).getTime();
+      }
+      if (timestamp && !isNaN(timestamp)) events.push(timestamp);
+    });
+    if (events.length > 0) {
+      events.sort((a, b) => a - b);
+      const startDate = new Date(events[0]);
+      const endDate = new Date(events[events.length - 1]);
+      const formatDate = (d) => {
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const year = String(d.getFullYear()).slice(-2);
+        return `${month}-${day}-${year}`;
+      };
+      timelineTitle = `Event Timeline (${formatDate(startDate)} to ${formatDate(endDate)})`;
+    }
+  }
+  // Render timeline title in bold for emphasis
+  doc.setFont(undefined, "bold");
+  doc.text(timelineTitle, 100, 38);
 
-  // ---------- Pie chart on LEFT ----------
-  const pieDataURL = createPieChartDataURL(riskCounts);
-  if (pieDataURL) {
-    const pieX = 20;
-    const pieY = 40;
-    const pieSize = 70;
-    doc.addImage(pieDataURL, "PNG", pieX, pieY, pieSize, pieSize);
+  // Timeseries histogram position (X-axis at y=110)
+  const timeseriesY = 43; // Start below title
+  const timeseriesHeight = 70;
+  const timeseriesXAxisY = timeseriesY + timeseriesHeight; // X-axis position
+
+  if (timeseriesDataURL) {
+    // Use more space for timeseries: start earlier and make wider
+    doc.addImage(timeseriesDataURL, "PNG", 85, timeseriesY, 105, timeseriesHeight);
   }
 
-  // ---------- Legend + Alert Breakdown on RIGHT ----------
-  const legendX = 120;
-  let legendY   = 36;   // line for "Risk Color Legend"
+  // Pie chart: align base with X-axis of timeseries (X-axis is at timeseriesXAxisY)
+  const pieDataURL = createPieChartDataURL(riskCounts);
+  if (pieDataURL) {
+    // Make pie chart slightly bigger: increase from 56 to 65
+    const pieHeight = 65;
+    // Starting from previous position (0.1 inch up, 0.2 inch left),
+    // move 0.1 inch right and 0.1 inch down (~7.2 points each).
+    const pieY = timeseriesXAxisY - pieHeight; // back to align with X-axis
+    const pieX = 20 - 14.4 + 7.2;              // net 0.1 inch left from original
+    doc.addImage(pieDataURL, "PNG", pieX, pieY, 65, pieHeight);
+  }
 
-  doc.setFontSize(9);
+  // Legend and Breakdown row: Below pie chart, moved 0.5 inch (14.17 points) down
+  const legendX = 20;
+  let legendY = 113 + 14.17; // 0.5 inch = 14.17 points (adjusted for removed Machine line)
+
+  doc.setFontSize(11.4); // ~10% bigger than 10.35
   doc.setTextColor(20, 20, 20);
+  doc.setFont(undefined, "bold");
   doc.text("Risk Color Legend", legendX, legendY);
-  legendY += 8; // ⬅ extra spacing below the line
+  legendY += 8;
 
-  // Red
   doc.setFillColor(231, 76, 60);
   doc.rect(legendX, legendY - 4, 4, 4, "F");
   doc.setTextColor(40, 40, 40);
-  doc.text("Critical / High risk – immediate triage", legendX + 6, legendY);
+  doc.setFont("Courier New", "normal");
+  doc.text("Critical / High risk", legendX + 6, legendY);
   legendY += 5;
 
-  // Orange
-  doc.setFillColor(243, 156, 18);
+  doc.setFillColor(59, 143, 207);
   doc.rect(legendX, legendY - 4, 4, 4, "F");
-  doc.text("Medium risk – monitor & investigate", legendX + 6, legendY);
-  legendY += 5;
-
-  // Green
-  doc.setFillColor(39, 174, 96);
-  doc.rect(legendX, legendY - 4, 4, 4, "F");
-  doc.text("Informational / low risk", legendX + 6, legendY);
+  doc.setFont("Courier New", "normal");
+  doc.text("Medium risk", legendX + 6, legendY);
   legendY += 8;
 
-  const highCount   = riskCounts[1] || 0;
-  const mediumCount = riskCounts[2] || 0;
-  const lowCount    = riskCounts[3] || 0;
-  const otherCount  = riskCounts.other || 0;
-  const totalCount  = highCount + mediumCount + lowCount + otherCount;
+  // Alert Breakdown further to the right, moved 0.5 inch down
+  const breakdownX = 120 - 14.17; // Move 0.5 inch (14.17 points) to the left
+  let breakdownY = 115 + 14.17; // 0.5 inch = 14.17 points
 
-  doc.setFontSize(10);
+  const highCount = riskCounts[1] || 0;
+  const mediumCount = riskCounts[2] || 0;
+  const lowCount = riskCounts[3] || 0;
+  const otherCount = riskCounts.other || 0;
+  const totalCount = highCount + mediumCount + lowCount + otherCount;
+
+  doc.setFontSize(12.65); // ~10% bigger than 11.5
   doc.setTextColor(20, 20, 20);
-  doc.text("Alert Breakdown", legendX, legendY);
-  legendY += 6;
+  doc.setFont(undefined, "bold");
+  doc.text("Alert Breakdown", breakdownX, breakdownY);
+  breakdownY += 6;
 
   doc.setFontSize(9);
   doc.setTextColor(40, 40, 40);
-  doc.text(`High Risk: ${highCount}`, legendX, legendY);     legendY += 5;
-  doc.text(`Medium Risk: ${mediumCount}`, legendX, legendY); legendY += 5;
-  doc.text(`Low Risk: ${lowCount}`, legendX, legendY);       legendY += 5;
+  doc.setFont("Courier New", "normal");
+  doc.text(`High Risk: ${highCount}`, breakdownX, breakdownY); breakdownY += 5;
+  doc.setFont("Courier New", "normal");
+  doc.text(`Medium Risk: ${mediumCount}`, breakdownX, breakdownY); breakdownY += 5;
+  doc.setFont("Courier New", "normal");
+  doc.text(`Low Risk: ${lowCount}`, breakdownX, breakdownY); breakdownY += 5;
   if (otherCount > 0) {
-    doc.text(`Other: ${otherCount}`, legendX, legendY);
-    legendY += 5;
+    doc.setFont("Courier New", "normal");
+    doc.text(`Other: ${otherCount}`, breakdownX, breakdownY);
+    breakdownY += 5;
   }
-  doc.text(`Total: ${totalCount}`, legendX, legendY);
-  legendY += 6;
+  doc.setFont("Courier New", "normal");
+  doc.text(`Total: ${totalCount}`, breakdownX, breakdownY);
+  breakdownY += 4;
 
   doc.setTextColor(80, 80, 80);
-  doc.text(`Total alerts (all nodes): ${totalAlerts}`, legendX, legendY);
-  legendY += 4;
-  doc.text(`Responding nodes: ${respondingNodes}`, legendX, legendY);
+  doc.setFont("Courier New", "normal");
+  doc.text(`Total alerts (all nodes): ${totalAlerts}`, breakdownX, breakdownY);
+  breakdownY += 4;
+  doc.text(`Responding nodes: ${respondingNodes}`, breakdownX, breakdownY);
 
-  // ---------- Tags Summary (LEFT, below pie) ----------
-  let tagsY = 125; // clearly below pie+legend
-  doc.setFontSize(11);
+  // Tags Summary and Top Processes below Alert Breakdown (with proper spacing)
+  // breakdownY already points to the end of Alert Breakdown (after "Responding nodes" line)
+  // Move this block DOWN by 0.25 inch (~18 points) relative to the current position
+  let tagsY = breakdownY + 8 + 18;
+  // Cap at reasonable position to stay on page 1 (A4 page height is ~280 points)
+  if (tagsY > 200) {
+    tagsY = 200; // Cap at safe position to stay on page 1
+  }
+
+  // Store the starting Y for Top Processes (same as Tags Summary start)
+  let procsX = 100;
+  let procsY = tagsY; // Start at same Y as Tags Summary
+
+  doc.setFontSize(12.1); // ~10% bigger than 11
   doc.setTextColor(20, 20, 20);
+  doc.setFont(undefined, "bold");
   doc.text("Tags Summary (top 10):", 20, tagsY);
   tagsY += 6;
 
   doc.setFontSize(9);
   doc.setTextColor(60, 60, 60);
+  doc.setFont("Courier New", "normal");
   if (!topTags || topTags.length === 0) {
     doc.text("No meaningful tags present in alerts.", 23, tagsY);
-    tagsY += 5;
+    tagsY += 4.5;
   } else {
     topTags.forEach(([tag, count]) => {
-      const line = `${tag}: ${count}`;
-      doc.text(line, 23, tagsY);
+      doc.text(`${tag}: ${count}`, 23, tagsY);
       tagsY += 4.5;
     });
   }
@@ -1141,17 +1821,19 @@ function buildSummaryPage(
   let nodesY = tagsY + 6;
   const nodes = Object.keys(nodeRiskMap || {}).sort(); // show all nodes
 
-  doc.setFontSize(11);
+  doc.setFontSize(12.1); // ~10% bigger than 11
   doc.setTextColor(20, 20, 20);
+  doc.setFont(undefined, "bold");
   doc.text("Node Risk Overview", 20, nodesY);
   nodesY += 6;
 
   doc.setFontSize(9);
   doc.setTextColor(60, 60, 60);
+  doc.setFont("Courier New", "normal");
 
   if (!nodes.length) {
     doc.text("No node-level risk breakdown available.", 23, nodesY);
-    nodesY += 5;
+    nodesY += 4.5;
   } else {
     nodes.forEach(node => {
       const counts = nodeRiskMap[node] || { 1: 0, 2: 0, 3: 0, other: 0 };
@@ -1163,53 +1845,58 @@ function buildSummaryPage(
       // Clickable node name, if anchor known
       if (anchor) {
         doc.setTextColor(0, 0, 180);
+        doc.setFont("Courier New", "normal");
         doc.textWithLink(node, nameX, rowY, {
           pageNumber: anchor.page,
           y: anchor.y
         });
       } else {
         doc.setTextColor(60, 60, 60);
+        doc.setFont("Courier New", "normal");
         doc.text(node, nameX, rowY);
       }
 
-      let colX = 130; // Increased spacing from node name to prevent overlap
+      // Position color boxes to the right to avoid overlap with node names
+      // Node names start at nameX = 23, so position boxes starting at 100
+      let colX = 100;
 
       // Red box + count
       doc.setFillColor(231, 76, 60);
       doc.rect(colX, rowY - 3, 4, 4, "F");
       doc.setTextColor(40, 40, 40);
+      doc.setFont("Courier New", "normal");
       doc.text(String(counts[1] || 0), colX + 6, rowY);
       colX += 22;
 
-      // Orange box + count
-      doc.setFillColor(243, 156, 18);
+      // Blue box + count (medium risk)
+      doc.setFillColor(59, 143, 207);
       doc.rect(colX, rowY - 3, 4, 4, "F");
+      doc.setFont("Courier New", "normal");
       doc.text(String(counts[2] || 0), colX + 6, rowY);
       colX += 22;
 
       // Green box + count
       doc.setFillColor(39, 174, 96);
       doc.rect(colX, rowY - 3, 4, 4, "F");
+      doc.setFont("Courier New", "normal");
       doc.text(String(counts[3] || 0), colX + 6, rowY);
 
-      nodesY += 5.5;
+      nodesY += 4.5;
     });
   }
 
-  // ---------- Top Processes / Commands (RIGHT, aligned with Tags Summary heading) ----------
-  let procsX = 120;
-  let procsY = 125;
-
-  doc.setFontSize(11);
+  doc.setFontSize(12.1); // ~10% bigger than 11
   doc.setTextColor(20, 20, 20);
+  doc.setFont(undefined, "bold");
   doc.text("Top Processes / Commands", procsX, procsY);
   procsY += 6;
 
   doc.setFontSize(9);
   doc.setTextColor(60, 60, 60);
+  doc.setFont("Courier New", "normal");
   if (!topProcesses || topProcesses.length === 0) {
     doc.text("No commands with count > 5.", procsX, procsY);
-    procsY += 5;
+    procsY += 4.5;
   } else {
     topProcesses.forEach(([cmd, count]) => {
       const text = `${cmd} (${count})`;
@@ -1221,15 +1908,16 @@ function buildSummaryPage(
     });
   }
 
-  // ---------- Top Source IPs (RIGHT, below Top Processes) ----------
   procsY += 4;
-  doc.setFontSize(11);
+  doc.setFontSize(12.1); // ~10% bigger than 11
   doc.setTextColor(20, 20, 20);
+  doc.setFont(undefined, "bold");
   doc.text("Top Source IPs", procsX, procsY);
   procsY += 6;
 
   doc.setFontSize(9);
   doc.setTextColor(60, 60, 60);
+  doc.setFont("Courier New", "normal");
   if (!topIPs || topIPs.length === 0) {
     doc.text("No IPs with count > 5.", procsX, procsY);
   } else {
@@ -1262,12 +1950,10 @@ function buildDetailsPages(doc, alerts, nodeAnchors) {
     });
   }
 
-  // Column positions
+  // Column positions (matching dashboard.html: Time, Message/Tags, Triggered By)
   const colTimeX = 10;
-  const colRiskX = 48;
-  const colIPX   = 62;
-  const colPIDX  = 92;
-  const colMsgX  = 110;
+  const colMsgX  = 55;
+  const colTrigX = 145;
   const rowHeightMin = 6;
 
   // Helper to draw node header + table header on a page
@@ -1308,10 +1994,8 @@ function buildDetailsPages(doc, alerts, nodeAnchors) {
     doc.setFont(undefined, "bold");
     doc.setTextColor(20, 20, 20);
     doc.text("Time", colTimeX, headerY);
-    doc.text("Risk", colRiskX, headerY);
-    doc.text("IP",   colIPX,   headerY);
-    doc.text("PID",  colPIDX,  headerY);
     doc.text("Message / Tags", colMsgX, headerY);
+    doc.text("Triggered By", colTrigX, headerY);
 
     y = headerY + 6;
     doc.setFont(undefined, "normal");
@@ -1374,18 +2058,47 @@ function buildDetailsPages(doc, alerts, nodeAnchors) {
 
     // ---------- Rows ----------
     nodeAlerts.forEach(a => {
-      const ts   = a.time || a.timestamp || "unknown-time";
-      const riskN = normalizeRiskLevel(a) || "?";
-      const ip   = a.ip || a.IP || "-";
-      const pid  = (a.pid != null && a.pid !== undefined) ? String(a.pid) : "-";
-      const msgBase = a.message || a.msg || a.description || a.cmd || a.comm || "Unknown event";
+      const ts = formatTimestamp(a.time || a.timestamp);
+      const risk = normalizeRiskLevel(a);
+      let [rr, gg, bb] = getRiskRGB(risk);
+
+      // Slightly darker blue for medium for PDF readability
+      if (risk === 2) {
+        rr = 45; gg = 120; bb = 185;
+      }
+
+      // Message + tags
+      const msgBase =
+        a.message || a.msg || a.description || a.cmd || a.comm || "Unknown event";
       const tagsArr = Array.isArray(a.tags) ? a.tags : [];
       const tagsStr = tagsArr.length ? ` [tags: ${tagsArr.join(", ")}]` : "";
       const fullMsg = msgBase + tagsStr;
 
-      const wrappedMsg = doc.splitTextToSize(fullMsg, 80);
-      const msgLines   = wrappedMsg.length || 1;
-      const rowHeight  = Math.max(rowHeightMin, msgLines * 4.2);
+      // Triggered by (rule + pid/ip)
+      let triggeredBy = a.triggered_by && a.triggered_by.trim()
+        ? a.triggered_by
+        : "runtime-detection";
+
+      const triggerMeta = [];
+
+      if (
+        a.ip &&
+        a.ip !== "127.0.0.1" &&
+        a.ip !== "localhost"
+      ) {
+        triggerMeta.push(`ip=${a.ip}`);
+      }
+
+      if (triggerMeta.length > 0) {
+        triggeredBy += ` (${triggerMeta.join(", ")})`;
+      }
+
+      const wrappedMsg = doc.splitTextToSize(fullMsg, 85);
+      const wrappedTrigger = splitTriggeredByForPDF(doc, triggeredBy, 45);
+
+      const msgLines = wrappedMsg.length || 1;
+      const trigLines = wrappedTrigger.length || 1;
+      const rowHeight = Math.max(rowHeightMin, Math.max(msgLines, trigLines) * 4.2);
 
       if (y + rowHeight > 285) {
         // New page for continuation of this node
@@ -1410,21 +2123,26 @@ function buildDetailsPages(doc, alerts, nodeAnchors) {
         y = drawNodeHeaderAndTable(node, counts, totalForNode, y);
       }
 
-      // Color the entire row based on risk (bold colors)
-      const [rr, gg, bb] = getRiskRGB(riskN);
-      doc.setTextColor(rr, gg, bb);
+      // Row styling
+      doc.setFontSize(9);
       doc.setFont(undefined, "normal");
+      doc.setTextColor(rr, gg, bb);
 
-      // Basic columns
-      doc.text(String(ts), colTimeX, y);
-      doc.text(String(riskN), colRiskX, y);
-      doc.text(String(ip), colIPX, y);
-      doc.text(String(pid), colPIDX, y);
+      // Time column
+      doc.text(ts, colTimeX, y);
 
+      // Message / Tags column
       let msgY = y;
       wrappedMsg.forEach(line => {
         doc.text(line, colMsgX, msgY);
         msgY += 4.2;
+      });
+
+      // Triggered By column
+      let trigY = y;
+      wrappedTrigger.forEach(line => {
+        doc.text(line, colTrigX, trigY);
+        trigY += 4.2;
       });
 
       y += rowHeight + 1.5;
@@ -2356,43 +3074,96 @@ function showAlertsPopup(ip) {
       const data = JSON.parse(event.data);
 
       if (data.type === "alert_list" && Array.isArray(data.alerts)) {
-        const popup = document.getElementById('rules-popup');
-        const content = document.getElementById('rules-content');
-
+        const popup = document.getElementById('server-charts-popup');
+        
         if (data.alerts.length === 0) {
-          content.innerHTML = `<div class="no-rules">No alerts found for server ${ip}</div>`;
-        } else {
-          let alertsHtml = `<div class="rule-item" style="border-left: 4px solid #f39c12; margin-bottom: 1rem;">`;
-          alertsHtml += `<div class="rule-type">Server: ${ip} (${data.alerts.length} alerts)</div>`;
-
-          data.alerts.forEach(alert => {
-            const timestamp = alert.time || alert.timestamp || 'Unknown time';
-            const message = alert.message || alert.msg || 'Unknown event';
-            const risk = alert.risk_level || alert.severity || 'unknown';
-            const riskBullet = getRiskBullet(risk);
-
-            alertsHtml += `
-              <div class="rule-item" style="margin-left: 1rem; margin-top: 0.5rem; border-left: 2px solid ${risk === 'critical' || risk === 'high' || risk === 1 ? '#e74c3c' : risk === 'medium' || risk === 2 ? '#f39c12' : '#27ae60'};">
-                <div class="rule-type">${riskBullet} ${timestamp}</div>
-                <div class="rule-details">${message}</div>
-              </div>
-            `;
-          });
-
-          alertsHtml += `</div>`;
-          content.innerHTML = alertsHtml;
+          document.getElementById('server-charts-content').innerHTML = 
+            `<div class="no-rules">No alerts found for server ${ip}</div>`;
+          popup.style.display = 'block';
+          return;
         }
 
-        popup.style.display = 'block';
-        // Change the popup title to reflect that we're showing alerts
+        // Process alerts for this server
+        const serverAlerts = data.alerts.map(a => ({ ...a, __server: ip }));
+        const metrics = computeAlertMetrics(serverAlerts);
+        const riskCounts = metrics.riskCounts;
+
+        // Update pie chart (reduced height by 25%)
+        const pieCanvas = document.getElementById('server-pie-chart');
+        if (pieCanvas) {
+          // Create pie chart with reduced height
+          const pieDataURL = createPieChartDataURL(riskCounts, pieCanvas.width, pieCanvas.height);
+          if (pieDataURL) {
+            const img = new Image();
+            img.onload = () => {
+              const ctx = pieCanvas.getContext('2d');
+              ctx.clearRect(0, 0, pieCanvas.width, pieCanvas.height);
+              ctx.drawImage(img, 0, 0, pieCanvas.width, pieCanvas.height);
+            };
+            img.src = pieDataURL;
+          }
+        }
+
+        // Update timeseries chart
+        const timeseriesCanvas = document.getElementById('server-timeseries-chart');
+        if (timeseriesCanvas) {
+          // Use the canvas's actual width and height for the popup
+          const timeseriesDataURL = createTimeseriesHistogramDataURL(serverAlerts, timeseriesCanvas.width, timeseriesCanvas.height);
+          if (timeseriesDataURL) {
+            const img = new Image();
+            img.onload = () => {
+              const ctx = timeseriesCanvas.getContext('2d');
+              ctx.clearRect(0, 0, timeseriesCanvas.width, timeseriesCanvas.height);
+              ctx.drawImage(img, 0, 0, timeseriesCanvas.width, timeseriesCanvas.height);
+            };
+            img.src = timeseriesDataURL;
+          }
+        }
+
+        // Update alert breakdown
+        const breakdownHtml = `
+          <div class="alert-breakdown-item">
+            <span>High Risk:</span>
+            <span>${riskCounts[1] || 0}</span>
+          </div>
+          <div class="alert-breakdown-item">
+            <span>Medium Risk:</span>
+            <span>${riskCounts[2] || 0}</span>
+          </div>
+          <div class="alert-breakdown-item">
+            <span>Low Risk:</span>
+            <span>${riskCounts[3] || 0}</span>
+          </div>
+          <div class="alert-breakdown-item">
+            <span>Total:</span>
+            <span>${(riskCounts[1] || 0) + (riskCounts[2] || 0) + (riskCounts[3] || 0)}</span>
+          </div>
+        `;
+        document.getElementById('server-alert-breakdown').innerHTML = breakdownHtml;
+
+        // Update tags summary
+        const tagsHtml = metrics.topTags.slice(0, 10).map(([tag, count]) => 
+          `<div style="padding: 0.25rem 0; color: var(--muted);">${tag}: ${count}</div>`
+        ).join('');
+        document.getElementById('server-tags-summary').innerHTML = tagsHtml || '<div style="color: var(--muted);">No tags</div>';
+
+        // Update top processes
+        const procsHtml = metrics.topProcesses.slice(0, 10).map(([proc, count]) => 
+          `<div style="padding: 0.25rem 0; color: var(--muted); word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">${proc}: ${count}</div>`
+        ).join('');
+        document.getElementById('server-top-processes').innerHTML = procsHtml || '<div style="color: var(--muted);">No processes</div>';
+
+        // Update popup title
         const title = popup.querySelector('h3');
-        title.textContent = '🚨 Server Alerts';
+        title.textContent = `🚨 Server Alert Details - ${ip}`;
+
+        popup.style.display = 'block';
       }
     } catch (err) {
       console.error("WebSocket alert fetch error:", err);
-      const popup = document.getElementById('rules-popup');
-      const content = document.getElementById('rules-content');
-      content.innerHTML = `<div class="no-rules">Failed to load alerts: ${err.message}</div>`;
+      const popup = document.getElementById('server-charts-popup');
+      document.getElementById('server-charts-content').innerHTML = 
+        `<div class="no-rules">Failed to load alerts: ${err.message}</div>`;
       popup.style.display = 'block';
     } finally {
       ws.close();
@@ -2401,11 +3172,15 @@ function showAlertsPopup(ip) {
 
   ws.onerror = (err) => {
     console.error(`❌ WebSocket error fetching alerts from ${ip}:`, err);
-    const popup = document.getElementById('rules-popup');
-    const content = document.getElementById('rules-content');
-    content.innerHTML = `<div class="no-rules">Failed to connect to server ${ip}</div>`;
+    const popup = document.getElementById('server-charts-popup');
+    document.getElementById('server-charts-content').innerHTML = 
+      `<div class="no-rules">Failed to connect to server ${ip}</div>`;
     popup.style.display = 'block';
   };
+}
+
+function closeServerChartsPopup() {
+  document.getElementById('server-charts-popup').style.display = 'none';
 }
 
 function closeRulesPopup() {

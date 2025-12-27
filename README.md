@@ -82,6 +82,7 @@ Rule files:
 - custom_rules.json
 - windows_security_rules.json (Details in WINDOWS_SECURITY_RULES_DESCRIPTION.md)
 - sensitive_files.json
+- regex_rules.json
 
 ### Hot reload:
 

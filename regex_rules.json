@@ -1,0 +1,76 @@
+[
+  {
+    "match_key": "arg1",
+    "pattern": "(?i)\\b(procdump(64)?\\.exe)\\b.*\\b(-ma)\\b.*\\b(lsass(\\.exe)?)\\b",
+    "tags": ["credential-access", "lsass-dump", "procdump"],
+    "risk_level": 1
+  },
+  {
+    "match_key": "arg1",
+    "pattern": "(?i)\\brundll32\\.exe\\b.*\\bcomsvcs\\.dll\\b\\s*,\\s*MiniDump\\b",
+    "tags": ["credential-access", "lsass-dump", "comsvcs"],
+    "risk_level": 1
+  },
+  {
+    "match_key": "cmd",
+    "pattern": "(?i)\\b(mimikatz|sekurlsa::logonpasswords|lsadump::sam|lsadump::lsa)\\b",
+    "tags": ["credential-access", "mimikatz"],
+    "risk_level": 1
+  },
+  {
+    "match_key": "arg1",
+    "pattern": "(?i)\\bwevtutil\\b\\s+(cl|clear-log)\\b",
+    "tags": ["defense-evasion", "log-clearing"],
+    "risk_level": 1
+  },
+  {
+    "match_key": "arg1",
+    "pattern": "(?i)\\b(vssadmin|wmic)\\b.*\\b(shadowcopy|shadows)\\b.*\\b(delete)\\b",
+    "tags": ["impact", "shadow-copy-delete", "ransomware"],
+    "risk_level": 1
+  },
+  {
+    "match_key": "arg1",
+    "pattern": "(?i)\\bbcdedit\\b.*\\b(recoveryenabled\\s+no|bootstatuspolicy\\s+ignoreallfailures)\\b",
+    "tags": ["defense-evasion", "recovery-inhibit"],
+    "risk_level": 1
+  },
+  {
+    "match_key": "arg1",
+    "pattern": "(?i)\\bnet\\b\\s+user\\b.*\\b/add\\b|\\bnet\\b\\s+localgroup\\b\\s+administrators\\b.*\\b/add\\b",
+    "tags": ["persistence", "account-manipulation", "priv-esc"],
+    "risk_level": 1
+  },
+  {
+    "match_key": "arg1",
+    "pattern": "(?i)\\bschtasks\\b\\s+/create\\b",
+    "tags": ["persistence", "scheduled-task-create"],
+    "risk_level": 2
+  },
+  {
+    "match_key": "arg1",
+    "pattern": "(?i)\\breg\\b\\s+add\\b\\s+HK(LM|CU)\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\b",
+    "tags": ["persistence", "run-key"],
+    "risk_level": 2
+  },
+  {
+  "match_key": "cmd",
+  "pattern": "(?i)nota.*",
+  "tags": ["test-regex"],
+  "risk_level": 1
+  },
+  {
+  "match_key": "all",
+  "pattern": "(?i)\\bb\\.txt\\b",
+  "tags": ["test-regex"],
+  "risk_level": 1
+},
+
+  {
+    "match_key": "arg1",
+    "pattern": "(?i)\\b(Set-MpPreference)\\b.*\\b(DisableRealtimeMonitoring\\s+\\$?true|DisableIOAVProtection\\s+\\$?true|DisableScriptScanning\\s+\\$?true)\\b",
+    "tags": ["defense-evasion", "av-tamper", "defender"],
+    "risk_level": 1
+  }
+]
+

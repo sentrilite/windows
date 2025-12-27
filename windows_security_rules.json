@@ -1,364 +1,524 @@
 {
-  "windows_rules": [
-    {
-      "id": "firewall_disabled",
-      "severity": 1,
-      "tags": ["firewall", "posture"],
-      "cmd": "powershell Get-NetFirewallProfile | Where-Object { $_.Enabled -eq $false } | Select-Object -Property Name, Enabled | Format-Table -AutoSize",
-      "sample_limit": 8,
-      "description": "High risk: Windows Firewall disabled."
-    },
-    {
-      "id": "defender_disabled",
-      "severity": 1,
-      "tags": ["antivirus", "defender", "posture"],
-      "cmd": "powershell Get-MpComputerStatus | Where-Object { $_.AntivirusEnabled -eq $false -or $_.RealTimeProtectionEnabled -eq $false } | Select-Object -Property AntivirusEnabled, RealTimeProtectionEnabled, AMServiceEnabled, BehaviorMonitorEnabled | Format-Table -AutoSize",
-      "sample_limit": 8,
-      "description": "High risk: Defender AV/real-time protection disabled."
-    },
-    {
-      "id": "uac_disabled",
-      "severity": 1,
-      "tags": ["uac", "posture"],
-      "cmd": "powershell (Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System' -Name 'EnableLUA' -ErrorAction SilentlyContinue).EnableLUA",
-      "sample_limit": 1,
-      "description": "High risk: UAC disabled."
-    },
-    {
-      "id": "guest_account_enabled",
-      "severity": 1,
-      "tags": ["users", "posture"],
-      "cmd": "powershell Get-LocalUser | Where-Object { $_.Name -eq 'Guest' -and $_.Enabled -eq $true } | Select-Object -Property Name, Enabled | Format-Table -AutoSize",
-      "sample_limit": 1,
-      "description": "High risk: Guest account enabled."
-    },
-    {
-      "id": "smb_v1_enabled",
-      "severity": 1,
-      "tags": ["smb", "protocol", "posture"],
-      "cmd": "powershell Get-WindowsOptionalFeature -Online -FeatureName 'SMB1Protocol' | Where-Object { $_.State -eq 'Enabled' } | Select-Object -Property FeatureName, State | Format-Table -AutoSize",
-      "sample_limit": 1,
-      "description": "High risk: SMBv1 enabled (deprecated/vulnerable)."
-    },
-    {
-      "id": "event_log_cleared",
-      "severity": 1,
-      "tags": ["logging", "forensics", "tampering"],
-      "cmd": "powershell Get-WinEvent -FilterHashtable @{LogName='Security'; Id=1102} -MaxEvents 5 | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
-      "sample_limit": 5,
-      "description": "High risk: Security event log cleared (possible cover-up)."
-    },
-    {
-      "id": "wmi_persistence_filters",
-      "severity": 1,
-      "tags": ["wmi", "persistence"],
-      "cmd": "powershell Get-WmiObject -Namespace root\\subscription -Class __EventFilter -ErrorAction SilentlyContinue | Select-Object Name, Query | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "High risk: WMI event filters can be used for persistence."
-    },
-    {
-      "id": "wmi_persistence_consumers",
-      "severity": 1,
-      "tags": ["wmi", "persistence"],
-      "cmd": "powershell Get-WmiObject -Namespace root\\subscription -Class CommandLineEventConsumer -ErrorAction SilentlyContinue | Select-Object Name, CommandLineTemplate | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "High risk: WMI CommandLineEventConsumer (persistence/execution)."
-    },
-    {
-      "id": "wmi_persistence_bindings",
-      "severity": 1,
-      "tags": ["wmi", "persistence"],
-      "cmd": "powershell Get-WmiObject -Namespace root\\subscription -Class __FilterToConsumerBinding -ErrorAction SilentlyContinue | Select-Object Filter, Consumer | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "High risk: WMI filter-to-consumer bindings (active persistence wiring)."
-    },
-    {
-      "id": "registry_autorun_system",
-      "severity": 1,
-      "tags": ["registry", "persistence"],
-      "cmd": "powershell Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run' -ErrorAction SilentlyContinue | Get-Member -MemberType NoteProperty | Where-Object { $_.Name -notlike 'PS*' } | Select-Object -Property Name",
-      "sample_limit": 10,
-      "description": "High risk: System-level autorun entries."
-    },
-    {
-      "id": "shares_everyone_access",
-      "severity": 1,
-      "tags": ["shares", "posture", "exposure"],
-      "cmd": "powershell Get-SmbShare | ForEach-Object { Get-SmbShareAccess -Name $_.Name | Where-Object { $_.AccountName -eq 'Everyone' } } | Select-Object Name, AccountName, AccessRight | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "High risk: SMB shares with Everyone access."
-    },
-    {
-      "id": "world_writable_files_system32",
-      "severity": 1,
-      "tags": ["file", "permissions", "posture"],
-      "cmd": "powershell Get-ChildItem -Path 'C:\\Windows\\System32' -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { $p=$_.FullName; try { $acl=Get-Acl $p; $w=$acl.Access | Where-Object { $_.IdentityReference -eq 'Everyone' -and ($_.FileSystemRights.ToString() -match 'Write') }; if ($w) { $p } } catch {} } | Select-Object -First 8 | Format-Table -AutoSize",
-      "sample_limit": 8,
-      "description": "High risk: World-writable files under System32."
-    },
-
-    {
-      "id": "public_tcp_listeners",
-      "severity": 2,
-      "tags": ["network", "posture", "exposure"],
-      "cmd": "powershell Get-NetTCPConnection | Where-Object { $_.State -eq 'Listen' -and $_.LocalAddress -eq '0.0.0.0' } | Select-Object LocalAddress, LocalPort, OwningProcess | Format-Table -AutoSize",
-      "sample_limit": 8,
-      "description": "Medium risk: TCP services listening on all interfaces."
-    },
-    {
-      "id": "public_udp_listeners",
-      "severity": 2,
-      "tags": ["network", "posture", "exposure"],
-      "cmd": "powershell Get-NetUDPEndpoint | Where-Object { $_.LocalAddress -eq '0.0.0.0' } | Select-Object LocalAddress, LocalPort, OwningProcess | Format-Table -AutoSize",
-      "sample_limit": 8,
-      "description": "Medium risk: UDP listeners on all interfaces."
-    },
-    {
-      "id": "scheduled_tasks_system_running",
-      "severity": 2,
-      "tags": ["scheduled_tasks", "persistence"],
-      "cmd": "powershell Get-ScheduledTask | Where-Object { $_.State -eq 'Running' -and $_.Principal.UserId -like '*SYSTEM*' } | Select-Object TaskName, State, Principal | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "Medium risk: Scheduled tasks running as SYSTEM (review)."
-    },
-    {
-      "id": "scheduled_tasks_hidden",
-      "severity": 2,
-      "tags": ["scheduled_tasks", "persistence"],
-      "cmd": "powershell Get-ScheduledTask | Where-Object { $_.Settings.Hidden -eq $true } | Select-Object TaskName, State, Settings | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "Medium risk: Hidden scheduled tasks."
-    },
-    {
-      "id": "admin_users",
-      "severity": 2,
-      "tags": ["users", "privileges", "posture"],
-      "cmd": "powershell Get-LocalGroupMember -Group 'Administrators' | Select-Object Name, PrincipalSource | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "Medium risk: Admin group membership review."
-    },
-    {
-      "id": "password_policy_weak",
-      "severity": 2,
-      "tags": ["password", "policy", "posture"],
-      "cmd": "powershell Get-LocalUser | Where-Object { $_.PasswordExpires -eq $false -or $_.PasswordRequired -eq $false } | Select-Object Name, PasswordExpires, PasswordRequired | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "Medium risk: Weak local password policy settings."
-    },
-    {
-      "id": "world_writable_files_programfiles",
-      "severity": 2,
-      "tags": ["file", "permissions", "posture"],
-      "cmd": "powershell Get-ChildItem -Path 'C:\\Program Files' -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { $p=$_.FullName; try { $acl=Get-Acl $p; $w=$acl.Access | Where-Object { $_.IdentityReference -eq 'Everyone' -and ($_.FileSystemRights.ToString() -match 'Write') }; if ($w) { $p } } catch {} } | Select-Object -First 8 | Format-Table -AutoSize",
-      "sample_limit": 8,
-      "description": "Medium risk: World-writable files under Program Files."
-    },
-    {
-      "id": "suspicious_services_temp_path",
-      "severity": 2,
-      "tags": ["services", "posture"],
-      "cmd": "powershell Get-CimInstance Win32_Service | Where-Object { $_.State -eq 'Running' -and ($_.PathName -match '(?i)\\\\temp\\\\|appdata\\\\local\\\\temp|\\\\users\\\\[^\\\\]+\\\\appdata\\\\') } | Select-Object Name, DisplayName, PathName, StartMode | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "Medium risk: Services running from temp/user-writable paths."
-    },
-    {
-      "id": "services_no_description",
-      "severity": 2,
-      "tags": ["services", "posture"],
-      "cmd": "powershell Get-WmiObject Win32_Service | Where-Object { $_.Description -eq '' -or $_.Description -eq $null } | Select-Object Name, DisplayName, Description | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "Medium risk: Services without descriptions (review for legitimacy)."
-    },
-    {
-      "id": "processes_temp_location",
-      "severity": 2,
-      "tags": ["processes", "edr"],
-      "cmd": "powershell Get-Process | Where-Object { $_.Path -and ($_.Path -match '(?i)\\\\temp\\\\|appdata\\\\local\\\\temp|\\\\users\\\\public\\\\') } | Select-Object ProcessName, Id, Path | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "Medium risk: Processes running from temp/user-writable locations."
-    },
-    {
-      "id": "processes_systemlike_names_non_system_path",
-      "severity": 2,
-      "tags": ["processes", "edr"],
-      "cmd": "powershell Get-Process | Where-Object { $_.ProcessName -match '(?i)svchost|dllhost|rundll32|lsass|csrss|winlogon' } | Where-Object { $_.Path -and ($_.Path -notmatch '(?i)\\\\windows\\\\system32|\\\\windows\\\\syswow64') } | Select-Object ProcessName, Id, Path | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "Medium risk: System-like process names running outside system directories."
-    },
-    {
-      "id": "network_connections_external_established",
-      "severity": 2,
-      "tags": ["network", "edr"],
-      "cmd": "powershell Get-NetTCPConnection | Where-Object { $_.State -eq 'Established' -and $_.RemoteAddress -notlike '192.168.*' -and $_.RemoteAddress -notlike '10.*' -and $_.RemoteAddress -notlike '172.16.*' -and $_.RemoteAddress -ne '127.0.0.1' } | Select-Object LocalAddress, LocalPort, RemoteAddress, RemotePort, OwningProcess | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "Medium risk: Established outbound connections to external IPs."
-    },
-    {
-      "id": "bitlocker_not_fully_encrypted",
-      "severity": 2,
-      "tags": ["encryption", "bitlocker", "posture"],
-      "cmd": "powershell Get-BitLockerVolume | Where-Object { $_.VolumeStatus -ne 'FullyEncrypted' } | Select-Object MountPoint, VolumeStatus, EncryptionPercentage | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "Medium risk: BitLocker disabled or incomplete."
-    },
-    {
-      "id": "remote_desktop_enabled",
-      "severity": 2,
-      "tags": ["remote_access", "rdp", "posture"],
-      "cmd": "powershell (Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server' -Name 'fDenyTSConnections' -ErrorAction SilentlyContinue).fDenyTSConnections",
-      "sample_limit": 1,
-      "description": "Medium risk: RDP enabled (review if needed)."
-    },
-    {
-      "id": "audit_policy_weak",
-      "severity": 2,
-      "tags": ["audit", "logging", "posture"],
-      "cmd": "powershell auditpol /get /category:* | Select-String -Pattern 'No Auditing'",
-      "sample_limit": 10,
-      "description": "Medium risk: Audit policies set to 'No Auditing'."
-    },
-    {
-      "id": "powershell_execution_policy_bypass",
-      "severity": 2,
-      "tags": ["powershell", "execution", "posture"],
-      "cmd": "powershell Get-ExecutionPolicy -List | Where-Object { $_.ExecutionPolicy -in @('Bypass','Unrestricted') } | Select-Object Scope, ExecutionPolicy | Format-Table -AutoSize",
-      "sample_limit": 5,
-      "description": "Medium risk: PowerShell execution policy permissive."
-    },
-    {
-      "id": "dns_servers_nonstandard",
-      "severity": 2,
-      "tags": ["network", "dns", "posture"],
-      "cmd": "powershell Get-DnsClientServerAddress | Select-Object InterfaceAlias, ServerAddresses | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "Medium risk: DNS servers review (nonstandard DNS can indicate hijack/implant)."
-    },
-    {
-      "id": "proxy_settings",
-      "severity": 2,
-      "tags": ["network", "proxy", "posture"],
-      "cmd": "powershell Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings' | Select-Object ProxyEnable, ProxyServer, AutoConfigURL | Format-Table -AutoSize",
-      "sample_limit": 5,
-      "description": "Medium risk: Proxy settings review (possible interception)."
-    },
-    {
-      "id": "windows_updates_disabled_policy",
-      "severity": 2,
-      "tags": ["updates", "patch", "posture"],
-      "cmd": "powershell (Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU' -Name 'NoAutoUpdate' -ErrorAction SilentlyContinue).NoAutoUpdate",
-      "sample_limit": 1,
-      "description": "Medium risk: Automatic updates disabled via policy."
-    },
-    {
-      "id": "tls_weak_ciphers_present",
-      "severity": 2,
-      "tags": ["tls", "encryption", "posture"],
-      "cmd": "powershell Get-TlsCipherSuite | Where-Object { $_.Name -match 'RC4|DES|MD5' } | Select-Object Name | Format-Table -AutoSize",
-      "sample_limit": 10,
-      "description": "Medium risk: Weak TLS cipher suites present."
-    },
-
-    /* -------------------- SYSMON-FOCUSED ADDITIONS -------------------- */
-
-    {
-      "id": "sysmon_process_create_lolbins",
-      "severity": 2,
-      "tags": ["sysmon", "process", "lolbins", "edr"],
-      "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -FilterXPath \"*[System[(EventID=1)]]\" -MaxEvents 200 | Where-Object { $_.Message -match '(?i)Image: .*\\\\(powershell|pwsh|cmd|wscript|cscript|mshta|rundll32|regsvr32|certutil|bitsadmin)\\.exe' } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
-      "sample_limit": 8,
-      "description": "Medium risk: Sysmon process creations for common LOLBins."
-    },
-    {
-      "id": "sysmon_network_connect_suspicious_tools",
-      "severity": 2,
-      "tags": ["sysmon", "network", "edr"],
-      "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -FilterXPath \"*[System[(EventID=3)]]\" -MaxEvents 200 | Where-Object { $_.Message -match '(?i)Image: .*\\\\(powershell|pwsh|cmd|rundll32|regsvr32|mshta|certutil|bitsadmin)\\.exe' } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
-      "sample_limit": 8,
-      "description": "Medium risk: Sysmon network connections initiated by suspicious tools."
-    },
-    {
-      "id": "sysmon_dns_queries_suspicious",
-      "severity": 2,
-      "tags": ["sysmon", "dns", "network", "edr"],
-      "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -FilterXPath \"*[System[(EventID=22)]]\" -MaxEvents 300 | Where-Object { $_.Message -match '(?i)QueryName: .*\\.(top|xyz|ru|cn)$|QueryName: .*pastebin|QueryName: .*githubusercontent|QueryName: .*ngrok|QueryName: .*duckdns' } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
-      "sample_limit": 8,
-      "description": "Medium risk: Sysmon DNS queries to suspicious domains/TLDs (tune per environment)."
-    },
-    {
-      "id": "sysmon_image_load_from_temp",
-      "severity": 2,
-      "tags": ["sysmon", "module-load", "edr"],
-      "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -FilterXPath \"*[System[(EventID=7)]]\" -MaxEvents 300 | Where-Object { $_.Message -match '(?i)ImageLoaded: .*\\\\(Temp|AppData\\\\Local\\\\Temp)\\\\' } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
-      "sample_limit": 8,
-      "description": "Medium risk: Sysmon DLL/image loads from temp locations."
-    },
-    {
-      "id": "sysmon_process_access_lsass",
-      "severity": 1,
-      "tags": ["sysmon", "credential-access", "lsass", "edr"],
-      "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -FilterXPath \"*[System[(EventID=10)]]\" -MaxEvents 200 | Where-Object { $_.Message -match '(?i)TargetImage: .*\\\\lsass\\.exe' } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
-      "sample_limit": 8,
-      "description": "High risk: Sysmon ProcessAccess to LSASS (credential dumping indicator). Requires Sysmon Event ID 10 enabled."
-    },
-    {
-      "id": "sysmon_file_create_in_startup_paths",
-      "severity": 1,
-      "tags": ["sysmon", "persistence", "file", "edr"],
-      "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -FilterXPath \"*[System[(EventID=11)]]\" -MaxEvents 300 | Where-Object { $_.Message -match '(?i)TargetFilename: .*\\\\(Startup|Start Menu\\\\Programs\\\\Startup)\\\\' } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
-      "sample_limit": 8,
-      "description": "High risk: File created in Startup folder paths (persistence)."
-    },
-    {
-      "id": "sysmon_registry_autorun_modifications",
-      "severity": 1,
-      "tags": ["sysmon", "registry", "persistence", "edr"],
-      "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -MaxEvents 300 | Where-Object { $_.Id -in 12,13,14 -and $_.Message -match '(?i)TargetObject: .*\\\\(Run|RunOnce)($|\\\\)' } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
-      "sample_limit": 8,
-      "description": "High risk: Sysmon registry changes in Run/RunOnce persistence keys."
-    },
-    {
-      "id": "sysmon_wmi_persistence_events",
-      "severity": 1,
-      "tags": ["sysmon", "wmi", "persistence", "edr"],
-      "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -MaxEvents 200 | Where-Object { $_.Id -in 19,20,21 } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
-      "sample_limit": 8,
-      "description": "High risk: Sysmon WMI persistence events (19/20/21)."
-    },
-
-    /* -------------------- EXTRA WINDOWS POSTURE / HARDENING CHECKS -------------------- */
-
-    {
-      "id": "lsa_protection_disabled",
-      "severity": 1,
-      "tags": ["credential-access", "posture", "hardening"],
-      "cmd": "powershell (Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa' -Name 'RunAsPPL' -ErrorAction SilentlyContinue).RunAsPPL",
-      "sample_limit": 1,
-      "description": "High risk: LSA protection (RunAsPPL) not enabled (helps protect LSASS)."
-    },
-    {
-      "id": "wdigest_use_logoncredential_enabled",
-      "severity": 1,
-      "tags": ["credential-access", "posture", "hardening"],
-      "cmd": "powershell (Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\WDigest' -Name 'UseLogonCredential' -ErrorAction SilentlyContinue).UseLogonCredential",
-      "sample_limit": 1,
-      "description": "High risk: WDigest UseLogonCredential enabled can expose cleartext credentials."
-    },
-    {
-      "id": "anonymous_sam_enumeration_allowed",
-      "severity": 2,
-      "tags": ["users", "posture", "hardening"],
-      "cmd": "powershell (Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa' -Name 'RestrictAnonymousSAM' -ErrorAction SilentlyContinue).RestrictAnonymousSAM",
-      "sample_limit": 1,
-      "description": "Medium risk: RestrictAnonymousSAM not enforced (SAM enumeration risk)."
-    },
-    {
-      "id": "powershell_transcription_disabled",
-      "severity": 2,
-      "tags": ["powershell", "logging", "posture"],
-      "cmd": "powershell (Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\Transcription' -Name 'EnableTranscripting' -ErrorAction SilentlyContinue).EnableTranscripting",
-      "sample_limit": 1,
-      "description": "Medium risk: PowerShell transcription not enabled (reduces visibility)."
-    }
-  ]
+    "windows_rules": [
+        {
+            "id": "firewall_disabled",
+            "severity": 1,
+            "tags": [
+                "firewall",
+                "posture"
+            ],
+            "cmd": "powershell Get-NetFirewallProfile | Where-Object { $_.Enabled -eq $false } | Select-Object -Property Name, Enabled | Format-Table -AutoSize",
+            "sample_limit": 8,
+            "description": "High risk: Windows Firewall disabled."
+        },
+        {
+            "id": "defender_disabled",
+            "severity": 1,
+            "tags": [
+                "antivirus",
+                "defender",
+                "posture"
+            ],
+            "cmd": "powershell Get-MpComputerStatus | Where-Object { $_.AntivirusEnabled -eq $false -or $_.RealTimeProtectionEnabled -eq $false } | Select-Object -Property AntivirusEnabled, RealTimeProtectionEnabled, AMServiceEnabled, BehaviorMonitorEnabled | Format-Table -AutoSize",
+            "sample_limit": 8,
+            "description": "High risk: Defender AV/real-time protection disabled."
+        },
+        {
+            "id": "uac_disabled",
+            "severity": 1,
+            "tags": [
+                "uac",
+                "posture"
+            ],
+            "cmd": "powershell (Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System' -Name 'EnableLUA' -ErrorAction SilentlyContinue).EnableLUA",
+            "sample_limit": 1,
+            "description": "High risk: UAC disabled."
+        },
+        {
+            "id": "guest_account_enabled",
+            "severity": 1,
+            "tags": [
+                "users",
+                "posture"
+            ],
+            "cmd": "powershell Get-LocalUser | Where-Object { $_.Name -eq 'Guest' -and $_.Enabled -eq $true } | Select-Object -Property Name, Enabled | Format-Table -AutoSize",
+            "sample_limit": 1,
+            "description": "High risk: Guest account enabled."
+        },
+        {
+            "id": "smb_v1_enabled",
+            "severity": 1,
+            "tags": [
+                "smb",
+                "protocol",
+                "posture"
+            ],
+            "cmd": "powershell Get-WindowsOptionalFeature -Online -FeatureName 'SMB1Protocol' | Where-Object { $_.State -eq 'Enabled' } | Select-Object -Property FeatureName, State | Format-Table -AutoSize",
+            "sample_limit": 1,
+            "description": "High risk: SMBv1 enabled (deprecated/vulnerable)."
+        },
+        {
+            "id": "event_log_cleared",
+            "severity": 1,
+            "tags": [
+                "logging",
+                "forensics",
+                "tampering"
+            ],
+            "cmd": "powershell Get-WinEvent -FilterHashtable @{LogName='Security'; Id=1102} -MaxEvents 5 | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
+            "sample_limit": 5,
+            "description": "High risk: Security event log cleared (possible cover-up)."
+        },
+        {
+            "id": "wmi_persistence_filters",
+            "severity": 1,
+            "tags": [
+                "wmi",
+                "persistence"
+            ],
+            "cmd": "powershell Get-WmiObject -Namespace root\\subscription -Class __EventFilter -ErrorAction SilentlyContinue | Select-Object Name, Query | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "High risk: WMI event filters can be used for persistence."
+        },
+        {
+            "id": "wmi_persistence_consumers",
+            "severity": 1,
+            "tags": [
+                "wmi",
+                "persistence"
+            ],
+            "cmd": "powershell Get-WmiObject -Namespace root\\subscription -Class CommandLineEventConsumer -ErrorAction SilentlyContinue | Select-Object Name, CommandLineTemplate | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "High risk: WMI CommandLineEventConsumer (persistence/execution)."
+        },
+        {
+            "id": "wmi_persistence_bindings",
+            "severity": 1,
+            "tags": [
+                "wmi",
+                "persistence"
+            ],
+            "cmd": "powershell Get-WmiObject -Namespace root\\subscription -Class __FilterToConsumerBinding -ErrorAction SilentlyContinue | Select-Object Filter, Consumer | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "High risk: WMI filter-to-consumer bindings (active persistence wiring)."
+        },
+        {
+            "id": "registry_autorun_system",
+            "severity": 1,
+            "tags": [
+                "registry",
+                "persistence"
+            ],
+            "cmd": "powershell Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run' -ErrorAction SilentlyContinue | Get-Member -MemberType NoteProperty | Where-Object { $_.Name -notlike 'PS*' } | Select-Object -Property Name",
+            "sample_limit": 10,
+            "description": "High risk: System-level autorun entries."
+        },
+        {
+            "id": "shares_everyone_access",
+            "severity": 1,
+            "tags": [
+                "shares",
+                "posture",
+                "exposure"
+            ],
+            "cmd": "powershell Get-SmbShare | ForEach-Object { Get-SmbShareAccess -Name $_.Name | Where-Object { $_.AccountName -eq 'Everyone' } } | Select-Object Name, AccountName, AccessRight | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "High risk: SMB shares with Everyone access."
+        },
+        {
+            "id": "world_writable_files_system32",
+            "severity": 1,
+            "tags": [
+                "file",
+                "permissions",
+                "posture"
+            ],
+            "cmd": "powershell Get-ChildItem -Path 'C:\\Windows\\System32' -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { $p=$_.FullName; try { $acl=Get-Acl $p; $w=$acl.Access | Where-Object { $_.IdentityReference -eq 'Everyone' -and ($_.FileSystemRights.ToString() -match 'Write') }; if ($w) { $p } } catch {} } | Select-Object -First 8 | Format-Table -AutoSize",
+            "sample_limit": 8,
+            "description": "High risk: World-writable files under System32."
+        },
+        {
+            "id": "public_tcp_listeners",
+            "severity": 2,
+            "tags": [
+                "network",
+                "posture",
+                "exposure"
+            ],
+            "cmd": "powershell Get-NetTCPConnection | Where-Object { $_.State -eq 'Listen' -and $_.LocalAddress -eq '0.0.0.0' } | Select-Object LocalAddress, LocalPort, OwningProcess | Format-Table -AutoSize",
+            "sample_limit": 8,
+            "description": "Medium risk: TCP services listening on all interfaces."
+        },
+        {
+            "id": "public_udp_listeners",
+            "severity": 2,
+            "tags": [
+                "network",
+                "posture",
+                "exposure"
+            ],
+            "cmd": "powershell Get-NetUDPEndpoint | Where-Object { $_.LocalAddress -eq '0.0.0.0' } | Select-Object LocalAddress, LocalPort, OwningProcess | Format-Table -AutoSize",
+            "sample_limit": 8,
+            "description": "Medium risk: UDP listeners on all interfaces."
+        },
+        {
+            "id": "scheduled_tasks_system_running",
+            "severity": 2,
+            "tags": [
+                "scheduled_tasks",
+                "persistence"
+            ],
+            "cmd": "powershell Get-ScheduledTask | Where-Object { $_.State -eq 'Running' -and $_.Principal.UserId -like '*SYSTEM*' } | Select-Object TaskName, State, Principal | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "Medium risk: Scheduled tasks running as SYSTEM (review)."
+        },
+        {
+            "id": "scheduled_tasks_hidden",
+            "severity": 2,
+            "tags": [
+                "scheduled_tasks",
+                "persistence"
+            ],
+            "cmd": "powershell Get-ScheduledTask | Where-Object { $_.Settings.Hidden -eq $true } | Select-Object TaskName, State, Settings | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "Medium risk: Hidden scheduled tasks."
+        },
+        {
+            "id": "admin_users",
+            "severity": 2,
+            "tags": [
+                "users",
+                "privileges",
+                "posture"
+            ],
+            "cmd": "powershell Get-LocalGroupMember -Group 'Administrators' | Select-Object Name, PrincipalSource | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "Medium risk: Admin group membership review."
+        },
+        {
+            "id": "password_policy_weak",
+            "severity": 2,
+            "tags": [
+                "password",
+                "policy",
+                "posture"
+            ],
+            "cmd": "powershell Get-LocalUser | Where-Object { $_.PasswordExpires -eq $false -or $_.PasswordRequired -eq $false } | Select-Object Name, PasswordExpires, PasswordRequired | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "Medium risk: Weak local password policy settings."
+        },
+        {
+            "id": "world_writable_files_programfiles",
+            "severity": 2,
+            "tags": [
+                "file",
+                "permissions",
+                "posture"
+            ],
+            "cmd": "powershell Get-ChildItem -Path 'C:\\Program Files' -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { $p=$_.FullName; try { $acl=Get-Acl $p; $w=$acl.Access | Where-Object { $_.IdentityReference -eq 'Everyone' -and ($_.FileSystemRights.ToString() -match 'Write') }; if ($w) { $p } } catch {} } | Select-Object -First 8 | Format-Table -AutoSize",
+            "sample_limit": 8,
+            "description": "Medium risk: World-writable files under Program Files."
+        },
+        {
+            "id": "suspicious_services_temp_path",
+            "severity": 2,
+            "tags": [
+                "services",
+                "posture"
+            ],
+            "cmd": "powershell Get-CimInstance Win32_Service | Where-Object { $_.State -eq 'Running' -and ($_.PathName -match '(?i)\\\temp\\\\|appdata\\\\local\\\temp|\\\\users\\\\[^\\\\]+\\\\appdata\\\\') } | Select-Object Name, DisplayName, PathName, StartMode | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "Medium risk: Services running from temp/user-writable paths."
+        },
+        {
+            "id": "services_no_description",
+            "severity": 2,
+            "tags": [
+                "services",
+                "posture"
+            ],
+            "cmd": "powershell Get-WmiObject Win32_Service | Where-Object { $_.Description -eq '' -or $_.Description -eq $null } | Select-Object Name, DisplayName, Description | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "Medium risk: Services without descriptions (review for legitimacy)."
+        },
+        {
+            "id": "processes_temp_location",
+            "severity": 2,
+            "tags": [
+                "processes",
+                "edr"
+            ],
+            "cmd": "powershell Get-Process | Where-Object { $_.Path -and ($_.Path -match '(?i)\\\temp\\\\|appdata\\\\local\\\temp|\\\\users\\\\public\\\\') } | Select-Object ProcessName, Id, Path | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "Medium risk: Processes running from temp/user-writable locations."
+        },
+        {
+            "id": "processes_systemlike_names_non_system_path",
+            "severity": 2,
+            "tags": [
+                "processes",
+                "edr"
+            ],
+            "cmd": "powershell Get-Process | Where-Object { $_.ProcessName -match '(?i)svchost|dllhost|rundll32|lsass|csrss|winlogon' } | Where-Object { $_.Path -and ($_.Path -notmatch '(?i)\\\\windows\\\\system32|\\\\windows\\\\syswow64') } | Select-Object ProcessName, Id, Path | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "Medium risk: System-like process names running outside system directories."
+        },
+        {
+            "id": "network_connections_external_established",
+            "severity": 2,
+            "tags": [
+                "network",
+                "edr"
+            ],
+            "cmd": "powershell Get-NetTCPConnection | Where-Object { $_.State -eq 'Established' -and $_.RemoteAddress -notlike '192.168.*' -and $_.RemoteAddress -notlike '10.*' -and $_.RemoteAddress -notlike '172.16.*' -and $_.RemoteAddress -ne '127.0.0.1' } | Select-Object LocalAddress, LocalPort, RemoteAddress, RemotePort, OwningProcess | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "Medium risk: Established outbound connections to external IPs."
+        },
+        {
+            "id": "bitlocker_not_fully_encrypted",
+            "severity": 2,
+            "tags": [
+                "encryption",
+                "bitlocker",
+                "posture"
+            ],
+            "cmd": "powershell Get-BitLockerVolume | Where-Object { $_.VolumeStatus -ne 'FullyEncrypted' } | Select-Object MountPoint, VolumeStatus, EncryptionPercentage | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "Medium risk: BitLocker disabled or incomplete."
+        },
+        {
+            "id": "remote_desktop_enabled",
+            "severity": 2,
+            "tags": [
+                "remote_access",
+                "rdp",
+                "posture"
+            ],
+            "cmd": "powershell (Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server' -Name 'fDenyTSConnections' -ErrorAction SilentlyContinue).fDenyTSConnections",
+            "sample_limit": 1,
+            "description": "Medium risk: RDP enabled (review if needed)."
+        },
+        {
+            "id": "audit_policy_weak",
+            "severity": 2,
+            "tags": [
+                "audit",
+                "logging",
+                "posture"
+            ],
+            "cmd": "powershell auditpol /get /category:* | Select-String -Pattern 'No Auditing'",
+            "sample_limit": 10,
+            "description": "Medium risk: Audit policies set to 'No Auditing'."
+        },
+        {
+            "id": "powershell_execution_policy_bypass",
+            "severity": 2,
+            "tags": [
+                "powershell",
+                "execution",
+                "posture"
+            ],
+            "cmd": "powershell Get-ExecutionPolicy -List | Where-Object { $_.ExecutionPolicy -in @('Bypass','Unrestricted') } | Select-Object Scope, ExecutionPolicy | Format-Table -AutoSize",
+            "sample_limit": 5,
+            "description": "Medium risk: PowerShell execution policy permissive."
+        },
+        {
+            "id": "dns_servers_nonstandard",
+            "severity": 2,
+            "tags": [
+                "network",
+                "dns",
+                "posture"
+            ],
+            "cmd": "powershell Get-DnsClientServerAddress | Select-Object InterfaceAlias, ServerAddresses | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "Medium risk: DNS servers review (nonstandard DNS can indicate hijack/implant)."
+        },
+        {
+            "id": "proxy_settings",
+            "severity": 2,
+            "tags": [
+                "network",
+                "proxy",
+                "posture"
+            ],
+            "cmd": "powershell Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings' | Select-Object ProxyEnable, ProxyServer, AutoConfigURL | Format-Table -AutoSize",
+            "sample_limit": 5,
+            "description": "Medium risk: Proxy settings review (possible interception)."
+        },
+        {
+            "id": "windows_updates_disabled_policy",
+            "severity": 2,
+            "tags": [
+                "updates",
+                "patch",
+                "posture"
+            ],
+            "cmd": "powershell (Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU' -Name 'NoAutoUpdate' -ErrorAction SilentlyContinue).NoAutoUpdate",
+            "sample_limit": 1,
+            "description": "Medium risk: Automatic updates disabled via policy."
+        },
+        {
+            "id": "tls_weak_ciphers_present",
+            "severity": 2,
+            "tags": [
+                "tls",
+                "encryption",
+                "posture"
+            ],
+            "cmd": "powershell Get-TlsCipherSuite | Where-Object { $_.Name -match 'RC4|DES|MD5' } | Select-Object Name | Format-Table -AutoSize",
+            "sample_limit": 10,
+            "description": "Medium risk: Weak TLS cipher suites present."
+        },
+        {
+            "id": "sysmon_process_create_lolbins",
+            "severity": 2,
+            "tags": [
+                "sysmon",
+                "process",
+                "lolbins",
+                "edr"
+            ],
+            "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -FilterXPath \"*[System[(EventID=1)]]\" -MaxEvents 200 | Where-Object { $_.Message -match '(?i)Image: .*\\\\(powershell|pwsh|cmd|wscript|cscript|mshta|rundll32|regsvr32|certutil|bitsadmin)\\.exe' } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
+            "sample_limit": 8,
+            "description": "Medium risk: Sysmon process creations for common LOLBins."
+        },
+        {
+            "id": "sysmon_network_connect_suspicious_tools",
+            "severity": 2,
+            "tags": [
+                "sysmon",
+                "network",
+                "edr"
+            ],
+            "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -FilterXPath \"*[System[(EventID=3)]]\" -MaxEvents 200 | Where-Object { $_.Message -match '(?i)Image: .*\\\\(powershell|pwsh|cmd|rundll32|regsvr32|mshta|certutil|bitsadmin)\\.exe' } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
+            "sample_limit": 8,
+            "description": "Medium risk: Sysmon network connections initiated by suspicious tools."
+        },
+        {
+            "id": "sysmon_dns_queries_suspicious",
+            "severity": 2,
+            "tags": [
+                "sysmon",
+                "dns",
+                "network",
+                "edr"
+            ],
+            "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -FilterXPath \"*[System[(EventID=22)]]\" -MaxEvents 300 | Where-Object { $_.Message -match '(?i)QueryName: .*\\.(top|xyz|ru|cn)$|QueryName: .*pastebin|QueryName: .*githubusercontent|QueryName: .*ngrok|QueryName: .*duckdns' } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
+            "sample_limit": 8,
+            "description": "Medium risk: Sysmon DNS queries to suspicious domains/TLDs (tune per environment)."
+        },
+        {
+            "id": "sysmon_image_load_from_temp",
+            "severity": 2,
+            "tags": [
+                "sysmon",
+                "module-load",
+                "edr"
+            ],
+            "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -FilterXPath \"*[System[(EventID=7)]]\" -MaxEvents 300 | Where-Object { $_.Message -match '(?i)ImageLoaded: .*\\\\(Temp|AppData\\\\Local\\\\Temp)\\\\' } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
+            "sample_limit": 8,
+            "description": "Medium risk: Sysmon DLL/image loads from temp locations."
+        },
+        {
+            "id": "sysmon_process_access_lsass",
+            "severity": 1,
+            "tags": [
+                "sysmon",
+                "credential-access",
+                "lsass",
+                "edr"
+            ],
+            "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -FilterXPath \"*[System[(EventID=10)]]\" -MaxEvents 200 | Where-Object { $_.Message -match '(?i)TargetImage: .*\\\\lsass\\.exe' } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
+            "sample_limit": 8,
+            "description": "High risk: Sysmon ProcessAccess to LSASS (credential dumping indicator). Requires Sysmon Event ID 10 enabled."
+        },
+        {
+            "id": "sysmon_file_create_in_startup_paths",
+            "severity": 1,
+            "tags": [
+                "sysmon",
+                "persistence",
+                "file",
+                "edr"
+            ],
+            "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -FilterXPath \"*[System[(EventID=11)]]\" -MaxEvents 300 | Where-Object { $_.Message -match '(?i)TargetFilename: .*\\\\(Startup|Start Menu\\\\Programs\\\\Startup)\\\\' } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
+            "sample_limit": 8,
+            "description": "High risk: File created in Startup folder paths (persistence)."
+        },
+        {
+            "id": "sysmon_registry_autorun_modifications",
+            "severity": 1,
+            "tags": [
+                "sysmon",
+                "registry",
+                "persistence",
+                "edr"
+            ],
+            "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -MaxEvents 300 | Where-Object { $_.Id -in 12,13,14 -and $_.Message -match '(?i)TargetObject: .*\\\\(Run|RunOnce)($|\\\\)' } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
+            "sample_limit": 8,
+            "description": "High risk: Sysmon registry changes in Run/RunOnce persistence keys."
+        },
+        {
+            "id": "sysmon_wmi_persistence_events",
+            "severity": 1,
+            "tags": [
+                "sysmon",
+                "wmi",
+                "persistence",
+                "edr"
+            ],
+            "cmd": "powershell Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -MaxEvents 200 | Where-Object { $_.Id -in 19,20,21 } | Select-Object TimeCreated, Id, Message | Format-Table -AutoSize",
+            "sample_limit": 8,
+            "description": "High risk: Sysmon WMI persistence events (19/20/21)."
+        },
+        {
+            "id": "lsa_protection_disabled",
+            "severity": 1,
+            "tags": [
+                "credential-access",
+                "posture",
+                "hardening"
+            ],
+            "cmd": "powershell (Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa' -Name 'RunAsPPL' -ErrorAction SilentlyContinue).RunAsPPL",
+            "sample_limit": 1,
+            "description": "High risk: LSA protection (RunAsPPL) not enabled (helps protect LSASS)."
+        },
+        {
+            "id": "wdigest_use_logoncredential_enabled",
+            "severity": 1,
+            "tags": [
+                "credential-access",
+                "posture",
+                "hardening"
+            ],
+            "cmd": "powershell (Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\WDigest' -Name 'UseLogonCredential' -ErrorAction SilentlyContinue).UseLogonCredential",
+            "sample_limit": 1,
+            "description": "High risk: WDigest UseLogonCredential enabled can expose cleartext credentials."
+        },
+        {
+            "id": "anonymous_sam_enumeration_allowed",
+            "severity": 2,
+            "tags": [
+                "users",
+                "posture",
+                "hardening"
+            ],
+            "cmd": "powershell (Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa' -Name 'RestrictAnonymousSAM' -ErrorAction SilentlyContinue).RestrictAnonymousSAM",
+            "sample_limit": 1,
+            "description": "Medium risk: RestrictAnonymousSAM not enforced (SAM enumeration risk)."
+        },
+        {
+            "id": "powershell_transcription_disabled",
+            "severity": 2,
+            "tags": [
+                "powershell",
+                "logging",
+                "posture"
+            ],
+            "cmd": "powershell (Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\Transcription' -Name 'EnableTranscripting' -ErrorAction SilentlyContinue).EnableTranscripting",
+            "sample_limit": 1,
+            "description": "Medium risk: PowerShell transcription not enabled (reduces visibility)."
+        }
+    ]
 }
-

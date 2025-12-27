@@ -1092,6 +1092,35 @@ function formatTimestamp(ts) {
   return `${month}-${day}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
+function normalizeTriggeredByForPDF(s) {
+  s = (s || "").toString().trim();
+  if (!s) return "";
+
+  // Normalize separators/spaces
+  s = s.replace(/\s*—\s*/g, " — ");
+  s = s.replace(/\s+/g, " ");
+
+  // Prevent ugly breaks like "windows-use\nrs" by adding break opportunities at safe spots
+  // jsPDF can wrap on spaces; this ensures there *are* spaces around separators.
+  // Also split long single tokens on ":" and "/" with spaces around them.
+  s = s.replace(/\s*:\s*/g, ": ");      // "windows_checker:windows-users" -> "windows_checker: windows-users"
+  s = s.replace(/\s*\/\s*/g, " / ");    // "0.0.0.0" unchanged; "foo/bar" -> "foo / bar"
+
+  return s;
+}
+
+function splitTriggeredByForPDF(doc, text, maxWidth) {
+  const clean = normalizeTriggeredByForPDF(text);
+  if (!clean) return ["runtime-detection"];
+
+  // If it's still one huge token, force-break on hyphens as a last resort
+  // so we don't get mid-word breaks.
+  const hasSpaces = /\s/.test(clean);
+  const safe = hasSpaces ? clean : clean.replace(/-/g, "- ");
+
+  return doc.splitTextToSize(safe, maxWidth);
+}
+
 function buildDetailsPages(doc, alerts) {
   const sortedAlerts = alerts.slice().sort((a, b) => {
     const ra = normalizeRiskLevel(a) || 99;
@@ -1103,10 +1132,8 @@ function buildDetailsPages(doc, alerts) {
   });
 
   const colTimeX = 10;
-  const colRiskX = 48;
-  const colIPX = 62;
-  const colPIDX = 92;
-  const colMsgX = 110;
+  const colMsgX  = 55;
+  const colTrigX = 145;
   const rowHeightMin = 6;
 
   function drawPageHeader(doc, isContinuation) {
@@ -1125,10 +1152,8 @@ function buildDetailsPages(doc, alerts) {
     doc.setFont(undefined, "bold");
     doc.setTextColor(20, 20, 20);
     doc.text("Time", colTimeX, headerY);
-    doc.text("Risk", colRiskX, headerY);
-    doc.text("IP", colIPX, headerY);
-    doc.text("PID", colPIDX, headerY);
     doc.text("Message / Tags", colMsgX, headerY);
+    doc.text("Triggered By", colTrigX, headerY);
     
     return headerY + 6;
   }
@@ -1138,133 +1163,135 @@ function buildDetailsPages(doc, alerts) {
 
   sortedAlerts.forEach(a => {
     const ts = formatTimestamp(a.time || a.timestamp);
-    const riskN = normalizeRiskLevel(a) || "?";
-    const ip = a.ip || a.IP || "-";
-    const pid = (a.pid != null && a.pid !== undefined) ? String(a.pid) : "-";
-    const msgBase = a.message || a.msg || a.description || a.cmd || a.comm || "Unknown event";
+    const risk = normalizeRiskLevel(a);
+    let [rr, gg, bb] = getRiskRGB(risk);
+
+    // Slightly darker blue for medium for PDF readability
+    if (risk === 2) {
+      rr = 45; gg = 120; bb = 185;
+    }
+
+    // Message + tags
+    const msgBase =
+      a.message || a.msg || a.description || a.cmd || a.comm || "Unknown event";
     const tagsArr = Array.isArray(a.tags) ? a.tags : [];
     const tagsStr = tagsArr.length ? ` [tags: ${tagsArr.join(", ")}]` : "";
     const fullMsg = msgBase + tagsStr;
 
-    const wrappedMsg = doc.splitTextToSize(fullMsg, 80);
-    const msgLines = wrappedMsg.length || 1;
-    const rowHeight = Math.max(rowHeightMin, msgLines * 4.2);
+    // Triggered by (rule + pid/ip)
+    let triggeredBy = a.triggered_by && a.triggered_by.trim()
+      ? a.triggered_by
+      : "runtime-detection";
 
+    const triggerMeta = [];
+
+    if (
+      a.ip &&
+      a.ip !== "127.0.0.1" &&
+      a.ip !== "localhost"
+    ) {
+      triggerMeta.push(`ip=${a.ip}`);
+    }
+
+    if (triggerMeta.length > 0) {
+      triggeredBy += ` (${triggerMeta.join(", ")})`;
+    }
+
+    const wrappedMsg = doc.splitTextToSize(fullMsg, 85);
+    const wrappedTrigger = splitTriggeredByForPDF(doc, triggeredBy, 45);
+
+    const msgLines = wrappedMsg.length || 1;
+    const trigLines = wrappedTrigger.length || 1;
+    const rowHeight = Math.max(rowHeightMin, Math.max(msgLines, trigLines) * 4.2);
+
+    // Pagination
     if (y + rowHeight > 285) {
       doc.addPage();
       y = drawPageHeader(doc, true);
     }
 
-    // Ensure font size is set to 9 for data rows
+    // Row styling
     doc.setFontSize(9);
     doc.setFont(undefined, "normal");
-    
-    let [rr, gg, bb] = getRiskRGB(riskN);
-    // In Alert Details only, make medium-risk (blue) slightly darker for readability
-    if (riskN === 2) {
-      rr = 45; gg = 120; bb = 185; // slightly darker blue than summary charts
-    }
-    
-    // For Firefox compatibility, set color explicitly for each text element
-    // Show full timestamp without truncation
-    // Use normal weight for colored alert details text
-    doc.setFont(undefined, "normal");
     doc.setTextColor(rr, gg, bb);
-    doc.text(ts, colTimeX, y);
-    
-    doc.setTextColor(rr, gg, bb);
-    doc.text(String(riskN), colRiskX, y);
-    
-    doc.setTextColor(rr, gg, bb);
-    doc.text(String(ip), colIPX, y);
-    
-    doc.setTextColor(rr, gg, bb);
-    doc.text(String(pid), colPIDX, y);
 
-    // Message column also uses the same risk color
+    // Time column
+    doc.text(ts, colTimeX, y);
+
+    // Message / Tags column
     let msgY = y;
     wrappedMsg.forEach(line => {
-      doc.setTextColor(rr, gg, bb);
       doc.text(line, colMsgX, msgY);
       msgY += 4.2;
     });
 
+    // Triggered By column
+    let trigY = y;
+    wrappedTrigger.forEach(line => {
+      doc.text(line, colTrigX, trigY);
+      trigY += 4.2;
+    });
+
     y += rowHeight + 1.5;
   });
+
 }
 
-async function loadAlertsFromJSON(forceFresh = false) {
+async function loadAlertsFromJSON() {
   return new Promise((resolve) => {
     const host = getWebSocketHost();
-    const url = `ws://${host}:8765`;
-    
-    console.log("📥 Fetching fresh alerts via WebSocket:", url);
-    
-    // Create a new WebSocket connection to ensure fresh data (no caching)
-    const ws = new WebSocket(url);
-    let resolved = false;
-    
-    const timeout = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        ws.close();
-        console.warn("⚠️ Timeout fetching alerts via WebSocket");
-        resolve([]);
-      }
-    }, 30000); // 30 second timeout to allow slower backends
-    
-    ws.onopen = () => {
-      console.log("📤 Sending get_alerts request (fresh fetch, no cache)");
-      // Send request - backend should read fresh from alerts.json file each time
-      // The backend code reads from file on each request, so this should always be fresh
-      ws.send(JSON.stringify({ 
-        type: "get_alerts"
-      }));
+    const ws = new WebSocket(`ws://${host}:8765`);
+    let done = false;
+
+    const finish = (alerts = []) => {
+      if (done) return;
+      done = true;
+      try { ws.close(); } catch {}
+      resolve(alerts);
     };
-    
+
+    // Hard timeout – NEVER hang the UI
+    const timeout = setTimeout(() => {
+      console.warn("⚠️ PDF alert fetch timed out, continuing with empty set");
+      finish([]);
+    }, 5000); // 5 seconds is enough
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "get_alerts" }));
+    };
+
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+
+        // ✅ Accept alert_list (preferred)
         if (data.type === "alert_list" && Array.isArray(data.alerts)) {
           clearTimeout(timeout);
-          if (!resolved) {
-            resolved = true;
-            ws.close();
-            console.log(`✅ Loaded ${data.alerts.length} fresh alerts from alerts.json`);
-            resolve(data.alerts);
-          }
+          finish(data.alerts);
         }
-      } catch (error) {
-        console.warn("⚠️ Error parsing alerts response:", error);
-        if (!resolved) {
+
+        // ✅ Fallback: backend sends alerts directly
+        if (Array.isArray(data.alerts)) {
           clearTimeout(timeout);
-          resolved = true;
-          ws.close();
-          resolve([]);
+          finish(data.alerts);
         }
+      } catch (e) {
+        console.warn("⚠️ Error parsing alert payload", e);
       }
     };
-    
-    ws.onerror = (error) => {
-      console.warn("⚠️ WebSocket error fetching alerts:", error);
-      if (!resolved) {
-        clearTimeout(timeout);
-        resolved = true;
-        ws.close();
-        resolve([]);
-      }
+
+    ws.onerror = () => {
+      clearTimeout(timeout);
+      finish([]);
     };
-    
+
     ws.onclose = () => {
-      if (!resolved) {
-        clearTimeout(timeout);
-        resolved = true;
-        console.warn("⚠️ WebSocket closed before receiving alerts");
-        resolve([]);
-      }
+      clearTimeout(timeout);
+      finish([]);
     };
   });
 }
+
 
 async function downloadPDFReport() {
   // Check if jsPDF is loaded
@@ -1337,7 +1364,10 @@ async function downloadPDFReport() {
       pid: alert.pid || alert.PID || null,
       cmd: alert.cmd || alert.Cmd || alert.comm || alert.Comm || "",
       message: alert.message || alert.Message || alert.cmd || alert.comm || "Alert",
-      tags: alert.tags || alert.Tags || []
+      tags: alert.tags || alert.Tags || [],
+
+      // ✅ ADD THIS
+      triggered_by: alert.triggered_by || alert.TriggeredBy || ""
     });
   });
 
